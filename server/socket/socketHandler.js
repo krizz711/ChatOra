@@ -169,6 +169,11 @@ module.exports = (io) => {
         await redis.hdel('online_users', toUserId);
         return socket.emit('private:error', { error: 'User is offline' });
       }
+      const recipientSocket = io.sockets.sockets.get(recipient.socketId);
+      if (!recipientSocket) {
+        await redis.hdel('online_users', toUserId);
+        return socket.emit('private:error', { error: 'User is offline' });
+      }
 
       const message = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -186,7 +191,7 @@ module.exports = (io) => {
       };
 
       // Send to recipient
-      io.to(recipient.socketId).emit('private:receive', message);
+      recipientSocket.emit('private:receive', message);
       // Echo to sender
       socket.emit('private:receive', { ...message, toUserId });
     });

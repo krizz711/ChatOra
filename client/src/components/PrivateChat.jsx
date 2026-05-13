@@ -53,7 +53,7 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
             className={`${styles.starBtn} ${targetUser.starredByMe ? styles.starred : ''}`}
             type="button"
             onClick={() => onStarUser?.(targetUser.id)}
-            disabled={starringUserId === targetUser.id}
+            disabled={starringUserId === targetUser.id || targetUser.id?.startsWith('guest_')}
             title={targetUser.starredByMe ? 'Unstar this chatter' : 'Star this chatter'}
           >
             {targetUser.starredByMe ? '★' : '☆'} {targetUser.stars || 0}

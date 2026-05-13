@@ -209,7 +209,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                     e.stopPropagation();
                     onUserStar?.(u.id);
                   }}
-                  disabled={starringUserId === u.id}
+                  disabled={starringUserId === u.id || u.id?.startsWith('guest_')}
                   title={u.starredByMe ? 'Unstar this chatter' : 'Star this chatter'}
                 >
                   {u.starredByMe ? '★' : '☆'} {u.stars || 0}

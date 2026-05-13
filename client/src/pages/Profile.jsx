@@ -10,13 +10,22 @@ export default function Profile() {
   const [searchParams] = useSearchParams();
   const [viewingUser, setViewingUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ username: user?.username || '', bio: user?.bio || '' });
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [error, setError] = useState('');
+  const fileRef = useRef(null);
+
+  const SERVER = import.meta.env.VITE_SERVER_URL || '';
+  const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
 
   // Check if viewing another user
   useEffect(() => {
     const userId = searchParams.get('user');
     if (userId) {
       setLoading(true);
-      fetch(`/api/auth/users/${userId}`)
+      fetch(`${SERVER}/api/auth/users/${userId}`)
         .then(r => r.json())
         .then(data => {
           if (data.success) setViewingUser(data.user);
@@ -24,8 +33,11 @@ export default function Profile() {
         })
         .catch(() => setViewingUser(null))
         .finally(() => setLoading(false));
+      return;
     }
-  }, [searchParams]);
+    setViewingUser(null);
+    setLoading(false);
+  }, [searchParams, SERVER]);
 
   // Guest user check
   if (user?.isGuest) {
@@ -51,15 +63,6 @@ export default function Profile() {
       </div>
     );
   }
-
-  const [form, setForm] = useState({ username: user?.username || '', bio: user?.bio || '' });
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [msg, setMsg] = useState('');
-  const [error, setError] = useState('');
-  const fileRef = useRef(null);
-
-  const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
 
   // Show loading while fetching other user
   if (loading) {
@@ -139,17 +142,6 @@ export default function Profile() {
     } catch { setError('Avatar upload failed'); }
     finally { setUploading(false); fileRef.current.value = ''; }
   };
-
-  // Own profile check - show loading if fetching other user
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.card}>
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text2)' }}>Loading profile...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.page}>

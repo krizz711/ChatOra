@@ -72,7 +72,11 @@ export const useChat = (roomId) => {
     if (!socket) return;
     socket.emit('typing:start', { roomId });
     if (typingRef.current) clearTimeout(typingRef.current);
-    typingRef.current = setTimeout(() => sendTypingStop(), 3000);
+    typingRef.current = setTimeout(() => {
+      const s = getSocket();
+      if (s) s.emit('typing:stop', { roomId });
+      if (typingRef.current) clearTimeout(typingRef.current);
+    }, 3000);
   }, [roomId]);
 
   const sendTypingStop = useCallback(() => {

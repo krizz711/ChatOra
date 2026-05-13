@@ -12,7 +12,7 @@ export const usePrivateChat = () => {
     if (!socket) return;
 
     const onPrivateMessage = (msg) => {
-      const key = msg.toUserId || msg.sender.id;
+      const key = msg.toUserId ?? msg.sender.id;
       setConversations(prev => {
         const existing = prev[key] || [];
         const updated = [...existing, msg].slice(-MAX_MESSAGES);

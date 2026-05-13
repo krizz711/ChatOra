@@ -179,6 +179,7 @@ router.get('/stars', authMiddleware, async (req, res) => {
 router.post('/star/:userId', authMiddleware, async (req, res) => {
   const { userId } = req.params;
   if (!userId) return res.status(400).json({ error: 'Target user is required' });
+  if (userId.startsWith('guest_')) return res.status(400).json({ error: 'Cannot star a guest user' });
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot star yourself' });
 
   try {
