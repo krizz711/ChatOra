@@ -3,8 +3,16 @@ import { io } from 'socket.io-client';
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || '';
 
 let socket = null;
+const socketResetListeners = new Set();
 
 export const getSocket = () => socket;
+
+export const onSocketReset = (cb) => {
+  socketResetListeners.add(cb);
+};
+export const offSocketReset = (cb) => {
+  socketResetListeners.delete(cb);
+};
 
 export const initSocket = (token) => {
   if (socket) socket.disconnect();
@@ -15,6 +23,12 @@ export const initSocket = (token) => {
     reconnectionDelay: 1000,
     reconnectionAttempts: 5,
   });
+
+  // Notify listeners that socket instance was replaced
+  socketResetListeners.forEach((cb) => {
+    try { cb(socket); } catch (err) { console.error('socket reset listener error', err); }
+  });
+
   return socket;
 };
 

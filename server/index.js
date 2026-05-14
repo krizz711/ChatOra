@@ -3,6 +3,7 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const { socketAuth } = require('./middleware/authMiddleware');
 const socketHandler = require('./socket/socketHandler');
@@ -41,6 +42,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
 app.use(passport.initialize());
 
 // Rate limiting

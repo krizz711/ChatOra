@@ -2,7 +2,11 @@ const passport = require('passport');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
 const supabase = require('../db/supabase');
 const jwt = require('jsonwebtoken');
-
+const { stripUnsupportedUserFields, getUserColumns } = require('../db/userColumns');
+// Fail fast if critical env vars are missing
+if (!process.env.SERVER_URL) throw new Error('SERVER_URL env var is required for Google OAuth');
+if (!process.env.GOOGLE_CLIENT_ID) throw new Error('GOOGLE_CLIENT_ID env var is required for Google OAuth');
+if (!process.env.GOOGLE_CLIENT_SECRET) throw new Error('GOOGLE_CLIENT_SECRET env var is required for Google OAuth');
 // Debug: Log OAuth config on startup
 console.log('🔐 Google OAuth Configuration:');
 console.log(`   CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? '✓ Set' : '❌ MISSING'}`);
@@ -28,10 +32,13 @@ async (accessToken, refreshToken, profile, done) => {
     const name = profile.displayName || profile.name?.givenName || 'User';
     const avatar = profile.photos?.[0]?.value || null;
 
+    // Determine which user columns are available in this database
+    const oauthCols = await getUserColumns({ includeAuthProvider: true });
+
     // Try to find by google_id first
     let { data: user } = await supabase
       .from('users')
-      .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at, auth_provider')
+      .select(oauthCols)
       .eq('google_id', googleId)
       .single();
 
@@ -39,7 +46,7 @@ async (accessToken, refreshToken, profile, done) => {
       // Try to find by email (account merge)
       const { data: byEmail } = await supabase
         .from('users')
-        .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at, auth_provider')
+        .select(oauthCols)
         .eq('email', email)
         .single();
 
@@ -69,15 +76,15 @@ async (accessToken, refreshToken, profile, done) => {
 
       const { data: created, error } = await supabase
         .from('users')
-        .insert({
+        .insert(await stripUnsupportedUserFields({
           username,
           email,
           google_id: googleId,
           avatar_url: avatar,
           auth_provider: 'google',
           password_hash: null,
-        })
-        .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at, auth_provider')
+        }))
+        .select(oauthCols)
         .single();
 
       if (error) return done(error);

@@ -1,44 +1,52 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Auth.module.css';
 
 const SERVER = import.meta.env.VITE_SERVER_URL || '';
 
+const ERROR_MESSAGES = {
+  oauth_failed: 'Google sign-in failed. Check your Google OAuth callback URL and try again.',
+  oauth_cancelled: 'Google sign-in was cancelled or did not complete.',
+  no_user: 'Google did not return a user profile. Please try again.',
+  auth_failed: 'Could not finish sign-in. Please try again.',
+  no_token: 'Sign-in completed, but no token was returned. Please try again.',
+  invalid_guest_token: 'Guest session token is invalid. Please start a new guest session.',
+};
+
+const getLoginErrorMessage = (code) => {
+  if (!code) return '';
+  return ERROR_MESSAGES[code] || `Authentication failed: ${code}`;
+};
+
 export default function Login() {
-  const { login, loginAsGuest } = useAuth();
+  const { loginAsGuest } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [form, setForm] = useState({ email: '', password: '', country: '', state: '', gender: 'other', age: '' });
+  const [form, setForm] = useState({ country: '', state: '', gender: 'other', age: '' });
   const [guestName, setGuestName] = useState('');
-  const [mode, setMode] = useState('options'); // 'options' | 'email' | 'guest'
-  const [error, setError] = useState(searchParams.get('error') ? 'Authentication failed. Please try again.' : '');
+  const [mode, setMode] = useState('options'); // 'options' | 'guest'
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+  useEffect(() => {
+    const code = searchParams.get('error');
+    setError(getLoginErrorMessage(code));
+  }, [searchParams]);
 
-  const submitEmail = async e => {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    try {
-      await login(form.email, form.password, {
-        country: form.country,
-        state: form.state,
-        gender: form.gender,
-        age: form.age,
-      });
-      navigate('/');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
-    } finally { setLoading(false); }
-  };
+  const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const submitGuest = async e => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      await loginAsGuest(guestName);
+      await loginAsGuest(guestName, {
+        country: form.country,
+        state: form.state,
+        gender: form.gender,
+        age: form.age,
+      });
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.error || 'Could not start guest session');
@@ -55,7 +63,6 @@ export default function Login() {
         <div className={styles.logo}>NexChat</div>
         <p className={styles.sub}>
           {mode === 'options' && 'Choose how to continue'}
-          {mode === 'email' && 'Sign in with email'}
           {mode === 'guest' && 'Continue as guest'}
         </p>
 
@@ -77,10 +84,7 @@ export default function Login() {
 
             <div className={styles.divider}><span>or</span></div>
 
-            {/* Email */}
-            <button className={`btn btn-ghost ${styles.altBtn}`} onClick={() => setMode('email')}>
-              Sign in with email
-            </button>
+            {/* Email sign-in removed per user request */}
 
             {/* Guest */}
             <button className={`btn btn-ghost ${styles.altBtn} ${styles.guestBtn}`} onClick={() => setMode('guest')}>
@@ -90,56 +94,14 @@ export default function Login() {
           </div>
         )}
 
-        {/* EMAIL FORM */}
-        {mode === 'email' && (
-          <form onSubmit={submitEmail} className={styles.form}>
-            <div className={styles.field}>
-              <label>Email</label>
-              <input name="email" type="email" value={form.email} onChange={handle}
-                placeholder="you@example.com" required autoFocus />
-            </div>
-            <div className={styles.field}>
-              <label>Password</label>
-              <input name="password" type="password" value={form.password} onChange={handle}
-                placeholder="••••••••" required />
-            </div>
-            <div className={styles.profileNote}>Optional profile details can be added here or later from your profile page.</div>
-            <div className={styles.field}>
-              <label>Country</label>
-              <input name="country" value={form.country} onChange={handle} placeholder="e.g. Canada" />
-            </div>
-            <div className={styles.twoCol}>
-              <div className={styles.field}>
-                <label>State / Region</label>
-                <input name="state" value={form.state} onChange={handle} placeholder="e.g. Ontario" />
-              </div>
-              <div className={styles.field}>
-                <label>Age</label>
-                <input name="age" type="number" min="13" max="120" value={form.age} onChange={handle} placeholder="21" />
-              </div>
-            </div>
-            <div className={styles.field}>
-              <label>Gender</label>
-              <select name="gender" value={form.gender} onChange={handle}>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <button className={`btn btn-primary ${styles.submit}`} disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-            <button type="button" className={`btn btn-ghost ${styles.backBtn}`}
-              onClick={() => setMode('options')}>← Back</button>
-          </form>
-        )}
+        {/* Email sign-in removed */}
 
-        {/* GUEST FORM */}
+        {/* GUEST FORM (now requires full details) */}
         {mode === 'guest' && (
           <form onSubmit={submitGuest} className={styles.form}>
             <div className={styles.guestInfo}>
               <span>🎭</span>
-              <p>Pick a display name. Your messages vanish when you leave. No data saved.</p>
+              <p>Provide your display name and profile details. Messages are not stored after your session ends.</p>
             </div>
             <div className={styles.field}>
               <label>Display name</label>
@@ -153,10 +115,32 @@ export default function Login() {
               />
               <span className={styles.fieldHint}>Letters, numbers, _ and - only</span>
             </div>
+            <div className={styles.field}>
+              <label>Country</label>
+              <input name="country" value={form.country} onChange={e => setForm(p => ({ ...p, country: e.target.value }))} placeholder="e.g. Canada" required />
+            </div>
+            <div className={styles.twoCol}>
+              <div className={styles.field}>
+                <label>State / Region</label>
+                <input name="state" value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value }))} placeholder="e.g. Ontario" required />
+              </div>
+              <div className={styles.field}>
+                <label>Age</label>
+                <input name="age" type="number" min="13" max="120" value={form.age} onChange={e => setForm(p => ({ ...p, age: e.target.value }))} placeholder="21" required />
+              </div>
+            </div>
+            <div className={styles.field}>
+              <label>Gender</label>
+              <select name="gender" value={form.gender} onChange={e => setForm(p => ({ ...p, gender: e.target.value }))}>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
             <button className={`btn btn-primary ${styles.submit}`} disabled={loading || !guestName.trim()}>
               {loading ? 'Starting...' : 'Enter as guest'}
             </button>
-            <button type="button" className={`btn btn-ghost ${styles.backBtn}`}
+            <button type="button" className={`btn btn-ghost ${styles.backBtn}`} 
               onClick={() => setMode('options')}>← Back</button>
           </form>
         )}

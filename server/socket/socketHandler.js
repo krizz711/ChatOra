@@ -1,6 +1,7 @@
 const redis = require('../redis/redisClient');
 const supabase = require('../db/supabase');
 const { v4: uuidv4 } = require('uuid');
+const { getUserColumns } = require('../db/userColumns');
 
 // Simple profanity filter - add words as needed
 const BAD_WORDS = ['spam', 'scam']; // extend as needed
@@ -112,7 +113,6 @@ module.exports = (io) => {
             country,
             state,
             gender,
-            age,
             star_count
           )
         `)

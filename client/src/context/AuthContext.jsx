@@ -11,23 +11,34 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(() => localStorage.getItem('token'));
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    setToken(null);
+    setUser(null);
+    disconnectSocket();
+  }, []);
+
   const fetchMe = useCallback(async (authToken) => {
     try {
       if (authToken) axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
       const res = await axios.get(`${SERVER}/api/auth/me`);
       setUser(res.data.user);
       initSocket(authToken);
-    } catch {
+    } catch (err) {
+      // If we fail to fetch the current user (invalid token), ensure we log out locally
       logout();
     } finally {
+      // Always clear loading so UI can proceed
       setLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     if (token) {
       fetchMe(token);
     } else {
+      // No token available — ensure loading is cleared
       setLoading(false);
     }
   }, [token, fetchMe]);
@@ -54,16 +65,16 @@ export const AuthProvider = ({ children }) => {
     return user;
   };
 
-  const loginWithToken = (userData, t) => {
+  const loginWithToken = useCallback((userData, t) => {
     localStorage.setItem('token', t);
     axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
     setToken(t);
     setUser(userData);
     initSocket(t);
-  };
+  }, []);
 
-  const loginAsGuest = async (username) => {
-    const res = await axios.post(`${SERVER}/api/auth/guest`, { username });
+  const loginAsGuest = async (username, profile = {}) => {
+    const res = await axios.post(`${SERVER}/api/auth/guest`, { username, ...profile });
     const { user: u, token: t } = res.data;
     localStorage.setItem('token', t);
     axios.defaults.headers.common['Authorization'] = `Bearer ${t}`;
@@ -73,15 +84,19 @@ export const AuthProvider = ({ children }) => {
     return u;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
-    setToken(null);
-    setUser(null);
-    disconnectSocket();
-  };
+  // Previously logout was a simple function; keep it but ensure it's the same stable callback
+  // exported above so other hooks can depend on it.
 
   const updateUser = (updated) => setUser(updated);
+
+  // Cross-tab logout sync
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'token' && e.newValue === null) logout();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser, loginWithToken, loginAsGuest }}>

@@ -10,35 +10,35 @@ export default function AuthCallback() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-
-    if (!token) {
-      navigate('/login?error=no_token');
-      return;
-    }
-
-    const fetchUser = async () => {
+    const fetchUserFromCookie = async () => {
       try {
-        localStorage.setItem('token', token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        const res = await axios.get(`${SERVER}/api/auth/me`);
-        loginWithToken(res.data.user, token);
-        const u = res.data.user || {};
+        // Exchange short-lived httpOnly cookie for token + user
+        const res = await axios.get(`${SERVER}/api/auth/oauth-token`, { withCredentials: true });
+        const { user, token } = res.data;
+        // Let loginWithToken be the single source of truth for storing token and headers
+        loginWithToken(user, token);
+
+        const u = user || {};
         const needsProfile = (u.age === null || u.age === undefined || u.country === null || u.country === undefined || !u.gender || u.gender === 'other') && !u.isGuest;
         if (needsProfile) {
           navigate('/profile?setup=1');
         } else {
           navigate('/');
         }
-      } catch {
-        localStorage.removeItem('token');
+      } catch (err) {
+        try { localStorage.removeItem('token'); } catch {};
         navigate('/login?error=auth_failed');
       }
     };
 
-    fetchUser();
-  }, []);
+    try {
+      fetchUserFromCookie();
+    } catch (err) {
+      navigate('/login?error=auth_failed');
+    }
+  // loginWithToken is stable from AuthContext; include navigate as dependency
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loginWithToken, navigate]);
 
   return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center',

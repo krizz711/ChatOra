@@ -6,6 +6,7 @@ const { authMiddleware } = require('../middleware/authMiddleware');
 const { upload, cloudinary } = require('../config/cloudinary');
 const passport = require('../config/passport');
 const rateLimit = require('express-rate-limit');
+const { getUserColumns, stripUnsupportedUserFields, hasUsersColumn } = require('../db/userColumns');
 
 const normalizeGender = (value) => {
   const gender = String(value || 'other').toLowerCase();
@@ -21,39 +22,91 @@ const parseAge = (value) => {
 
 // ── GOOGLE OAUTH ──────────────────────────────────────────────────
 
-// Step 1: Redirect to Google
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
-);
+// Step 1: Redirect to Google with CSRF state cookie
+router.get('/google', (req, res, next) => {
+  const state = require('crypto').randomBytes(16).toString('hex');
+  const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 };
+  if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
+  res.cookie('nexchat_oauth_state', state, cookieOpts);
+  passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
+});
 
-// Step 2: Google callback with detailed error logging
-router.get('/google/callback',
-  (req, res, next) => {
-    passport.authenticate('google', { session: false }, (err, user, info) => {
-      const CLIENT = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
-      if (err) {
-        console.error('❌ Google OAuth Error Details:', {
-          message: err.message,
-          code: err.code,
-          status: err.status,
-          body: err.body,
-          fullError: JSON.stringify(err, null, 2),
-        });
-        const errorMsg = err.code || err.message || 'google_failed';
-        return res.redirect(`${CLIENT}/login?error=${encodeURIComponent(errorMsg)}`);
-      }
-
-      if (!user) {
-        console.error('❌ Google OAuth: No user returned', info);
-        return res.redirect(`${CLIENT}/login?error=no_user&info=${encodeURIComponent(JSON.stringify(info))}`);
-      }
-
-      console.log('✅ Google OAuth Success:', { userId: user.user?.id, username: user.user?.username });
-      const { user: userData, token } = user;
-      res.redirect(`${CLIENT}/auth/callback?token=${token}&userId=${userData.id}`);
-    })(req, res, next);
+// Step 2: Google callback with detailed error logging and state check
+router.get('/google/callback', (req, res, next) => {
+  const CLIENT = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const stateCookie = req.cookies && req.cookies.nexchat_oauth_state;
+  const stateQuery = req.query.state;
+  if (!stateCookie || !stateQuery || stateCookie !== stateQuery) {
+    // Clear cookie and abort
+    res.clearCookie('nexchat_oauth_state');
+    return res.redirect(`${CLIENT}/login?error=csrf`);
   }
-);
+  // Clear state cookie after validation
+  res.clearCookie('nexchat_oauth_state');
+
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err) {
+      console.error('❌ Google OAuth Error Details:', {
+        message: err.message,
+        code: err.code,
+        status: err.status,
+        body: err.body,
+        fullError: JSON.stringify(err, null, 2),
+      });
+      const errorMsg = err.code || err.message || 'google_failed';
+      return res.redirect(`${CLIENT}/login?error=${encodeURIComponent(errorMsg)}`);
+    }
+
+    if (!user) {
+      console.error('❌ Google OAuth: No user returned', info);
+      return res.redirect(`${CLIENT}/login?error=no_user&info=${encodeURIComponent(JSON.stringify(info))}`);
+    }
+
+    console.log('✅ Google OAuth Success:', { userId: user.user?.id, username: user.user?.username });
+    const { user: userData, token } = user;
+
+    // Set short-lived httpOnly cookie with the JWT instead of exposing it in the URL
+    const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 5 * 60 * 1000 };
+    if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
+    res.cookie('nexchat_oauth_token', token, cookieOpts);
+
+    // Redirect to client callback WITHOUT token in URL
+    return res.redirect(`${CLIENT}/auth/callback`);
+  })(req, res, next);
+});
+
+// Exchange cookie for token and user
+router.get('/oauth-token', async (req, res) => {
+  try {
+    const token = req.cookies && req.cookies.nexchat_oauth_token;
+    if (!token) return res.status(401).json({ error: 'no_token' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ error: 'invalid_token' });
+    }
+
+    if (decoded.isGuest) return res.status(401).json({ error: 'invalid_token' });
+
+    const cols = await getUserColumns();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select(cols)
+      .eq('id', decoded.userId)
+      .single();
+
+    if (error || !user) return res.status(401).json({ error: 'invalid_token' });
+
+    // Clear the cookie now that token is exchanged
+    res.clearCookie('nexchat_oauth_token');
+
+    return res.json({ user, token });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
 
 // ── GUEST LOGIN ───────────────────────────────────────────────────
 
@@ -64,23 +117,39 @@ const guestLimiter = rateLimit({
 });
 
 router.post('/guest', guestLimiter, async (req, res) => {
-  const { username } = req.body;
+  const { username, country, state, gender, age } = req.body;
 
   if (!username || typeof username !== 'string') {
-    return res.status(400).json({ error: 'Username is required' });
+    return res.status(400).json({ error: 'Display name is required' });
   }
 
   const clean = username.trim().replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 20);
   if (clean.length < 2) {
-    return res.status(400).json({ error: 'Username must be at least 2 characters' });
+    return res.status(400).json({ error: 'Display name must be at least 2 characters' });
   }
 
-  // Guest JWT — short-lived, carries guest flag, no DB record
+  // Require full details for guest per user's request
+  if (!country || !state || !gender || age === undefined || age === null || String(age).trim() === '') {
+    return res.status(400).json({ error: 'Please provide country, state, gender and age for guest sessions' });
+  }
+
+  const parsedAge = parseAge(age);
+  if (parsedAge === null) return res.status(400).json({ error: 'Invalid age' });
+
+  // Guest JWT — short-lived, carries guest flag and includes profile info (not stored in DB)
   const guestId = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const token = jwt.sign(
-    { userId: guestId, username: clean, isGuest: true },
+    {
+      userId: guestId,
+      username: clean,
+      isGuest: true,
+      country: country?.trim() || null,
+      state: state?.trim() || null,
+      gender: normalizeGender(gender),
+      age: parsedAge,
+    },
     process.env.JWT_SECRET,
-    { expiresIn: '4h' }  // Guests auto-expire
+    { expiresIn: '4h' } // Guests auto-expire
   );
 
   res.json({
@@ -91,6 +160,10 @@ router.post('/guest', guestLimiter, async (req, res) => {
       avatar_url: null,
       bio: '',
       isGuest: true,
+      country: country?.trim() || null,
+      state: state?.trim() || null,
+      gender: normalizeGender(gender),
+      age: parsedAge,
     },
     token,
   });
@@ -116,18 +189,19 @@ router.post('/register', async (req, res) => {
     if (existing) return res.status(409).json({ error: 'Username or email already taken' });
 
     const hashedPassword = await bcrypt.hash(password, 12);
+    const canStoreAge = await hasUsersColumn('age');
     const { data: user, error } = await supabase
       .from('users')
-      .insert({
+      .insert(await stripUnsupportedUserFields({
         username,
         email,
         password_hash: hashedPassword,
         country: country?.trim() || null,
         state: state?.trim() || null,
         gender: normalizeGender(gender),
-        age: parseAge(age),
-      })
-      .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at')
+        age: canStoreAge ? parseAge(age) : undefined,
+      }))
+      .select(await getUserColumns())
       .single();
 
     if (error) throw error;
@@ -146,9 +220,10 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password required' });
 
   try {
+    const userColumns = await getUserColumns({ includePasswordHash: true });
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at, password_hash')
+      .select(userColumns)
       .eq('email', email)
       .single();
 
@@ -161,7 +236,7 @@ router.post('/login', async (req, res) => {
     if (country !== undefined) profilePatch.country = country?.trim() || null;
     if (state !== undefined) profilePatch.state = state?.trim() || null;
     if (gender !== undefined) profilePatch.gender = normalizeGender(gender);
-    if (age !== undefined) profilePatch.age = parseAge(age);
+    if (age !== undefined && await hasUsersColumn('age')) profilePatch.age = parseAge(age);
 
     let safeUser = user;
     if (Object.keys(profilePatch).length) {
@@ -169,7 +244,7 @@ router.post('/login', async (req, res) => {
         .from('users')
         .update(profilePatch)
         .eq('id', user.id)
-        .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at')
+        .select(await getUserColumns())
         .single();
 
       if (updateError) throw updateError;
@@ -318,13 +393,13 @@ router.put('/profile', authMiddleware, async (req, res) => {
     if (country !== undefined) profilePatch.country = country?.trim() || null;
     if (state !== undefined) profilePatch.state = state?.trim() || null;
     if (gender !== undefined) profilePatch.gender = normalizeGender(gender);
-    if (age !== undefined) profilePatch.age = parseAge(age);
+    if (age !== undefined && await hasUsersColumn('age')) profilePatch.age = parseAge(age);
 
     const { data, error } = await supabase
       .from('users')
       .update(profilePatch)
       .eq('id', req.user.id)
-      .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at')
+      .select(await getUserColumns())
       .single();
 
     if (error) throw error;
@@ -347,7 +422,7 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
       .from('users')
       .update({ avatar_url: req.file.path })
       .eq('id', req.user.id)
-      .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at')
+      .select(await getUserColumns())
       .single();
 
     if (error) throw error;
@@ -365,7 +440,7 @@ router.get('/users/:userId', async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, email, avatar_url, bio, country, state, gender, age, star_count, created_at')
+      .select(await getUserColumns())
       .eq('id', userId)
       .single();
 
