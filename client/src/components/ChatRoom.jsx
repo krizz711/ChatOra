@@ -122,7 +122,7 @@ export default function ChatRoom({ room, onUserClick }) {
                     onClick={() => onUserClick?.(sender)}
                     title="Click to message">
                     {sender.avatar_url
-                      ? <img src={sender.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                      ? <img src={sender.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                       : sender.username?.slice(0, 2).toUpperCase() || '??'}
                   </div>
                 </div>

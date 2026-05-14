@@ -118,7 +118,7 @@ export default function Profile() {
             <div className={styles.avatarWrap}>
               <div className={styles.avatarBig}>
                 {viewingUser.avatar_url
-                  ? <img src={viewingUser.avatar_url} alt={viewingUser.username} />
+                  ? <img src={viewingUser.avatar_url} alt={viewingUser.username} style={{ objectFit: 'cover', width: '100%', height: '100%', borderRadius: '50%' }} />
                   : initials(viewingUser.username)}
               </div>
             </div>
@@ -135,26 +135,26 @@ export default function Profile() {
               <span>Member since</span>
               <span>{new Date(viewingUser.created_at).toLocaleDateString()}</span>
             </div>
-              <div className={styles.infoRow}>
-                <span>Country</span>
-                <span>{viewingUser.country || 'Not provided'}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span>State / Region</span>
-                <span>{viewingUser.state || 'Not provided'}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span>Gender</span>
-                <span>{viewingUser.gender || 'other'}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span>Age</span>
-                <span>{viewingUser.age || 'Not provided'}</span>
-              </div>
-              <div className={styles.infoRow}>
-                <span>Stars</span>
-                <StarBadge count={viewingUser.star_count} />
-              </div>
+            <div className={styles.infoRow}>
+              <span>Country</span>
+              <span>{viewingUser.country || 'Not provided'}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span>State / Region</span>
+              <span>{viewingUser.state || 'Not provided'}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span>Gender</span>
+              <span>{viewingUser.gender || 'other'}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span>Age</span>
+              <span>{viewingUser.age || 'Not provided'}</span>
+            </div>
+            <div className={styles.infoRow}>
+              <span>Stars</span>
+              <StarBadge count={viewingUser.star_count} />
+            </div>
           </div>
 
           {/* Actions */}
@@ -208,7 +208,7 @@ export default function Profile() {
           <div className={styles.avatarWrap}>
             <div className={styles.avatarBig}>
               {user?.avatar_url
-                ? <img src={user.avatar_url} alt={user.username} />
+                ? <img src={user.avatar_url} alt={user.username} style={{ objectFit: 'cover', width: '100%', height: '100%', borderRadius: '50%' }} />
                 : initials(user?.username)}
             </div>
             <span className={styles.statusDot} />
@@ -218,7 +218,7 @@ export default function Profile() {
             <p>{user?.bio || 'Set your bio to help others know you better.'}</p>
             <StarBadge count={user?.star_count} />
             <input type="file" ref={fileRef} onChange={handleAvatarChange}
-              accept="image/*" style={{display:'none'}} />
+              accept="image/*" style={{ display: 'none' }} />
             <button className="btn btn-ghost" onClick={() => fileRef.current?.click()} disabled={uploading}>
               {uploading ? 'Uploading...' : 'Change avatar'}
             </button>
@@ -240,7 +240,7 @@ export default function Profile() {
             <label>Bio</label>
             <textarea name="bio" value={form.bio} onChange={handle}
               placeholder="Tell people about yourself..." rows={3}
-              style={{resize:'vertical'}} />
+              style={{ resize: 'vertical' }} />
           </div>
           <div className={styles.field}>
             <label>Country</label>

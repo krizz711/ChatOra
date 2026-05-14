@@ -43,10 +43,10 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
     <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.userInfo}>
-          <div className="avatar" style={{width:30,height:30,fontSize:11}}>
+          <div className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>
             {targetUser.avatar_url
-              ? <img src={targetUser.avatar_url} alt="" style={{width:'100%',height:'100%',borderRadius:'50%'}} />
-              : targetUser.username?.slice(0,2).toUpperCase()}
+              ? <img src={targetUser.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              : targetUser.username?.slice(0, 2).toUpperCase()}
           </div>
           <span>{targetUser.username}</span>
           <button
@@ -60,7 +60,7 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
             {targetUser.stars || 0}
           </button>
         </div>
-        <div style={{display:'flex',gap:4}}>
+        <div style={{ display: 'flex', gap: 4 }}>
           <button className={styles.iconBtn} onClick={() => onViewProfile?.(targetUser)} title="View profile">
             Profile
           </button>
@@ -98,7 +98,7 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
       {uploading && <div className={styles.uploading}>Uploading...</div>}
 
       <div className={styles.inputArea}>
-        <input type="file" ref={fileRef} onChange={handleFile} style={{display:'none'}} accept="image/*,.pdf,.txt" />
+        <input type="file" ref={fileRef} onChange={handleFile} style={{ display: 'none' }} accept="image/*,.pdf,.txt" />
         <button className={styles.attachBtn} onClick={() => fileRef.current?.click()}>Attach</button>
         <input
           className={styles.input}

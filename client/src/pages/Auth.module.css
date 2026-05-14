@@ -1,9 +1,12 @@
+/* ═══════════════════════════════════════════
+   AUTH PAGES — Login / Register
+   ═══════════════════════════════════════════ */
+
 .page {
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
   padding: 20px;
 }
 
@@ -11,34 +14,49 @@
   width: 100%;
   max-width: 400px;
   background: var(--surface);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 40px 36px;
-  animation: fadeIn 0.3s ease;
+  animation: authEntry 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes authEntry {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .logo {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   color: var(--accent);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.04em;
   margin-bottom: 4px;
-  font-family: var(--mono);
 }
 
 .sub {
   color: var(--text2);
   font-size: 14px;
+  font-weight: 450;
   margin-bottom: 28px;
 }
 
 .error {
-  background: rgba(240,79,79,0.1);
-  border: 1px solid rgba(240,79,79,0.3);
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.2);
   color: var(--red);
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   font-size: 13px;
+  font-weight: 500;
   margin-bottom: 16px;
 }
 
@@ -65,11 +83,11 @@
 }
 
 .field label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text2);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
 }
 
 .submit {
@@ -77,6 +95,7 @@
   justify-content: center;
   padding: 12px;
   font-size: 15px;
+  font-weight: 700;
   margin-top: 4px;
 }
 
@@ -85,16 +104,20 @@
   margin-top: 20px;
   font-size: 13px;
   color: var(--text2);
+  font-weight: 450;
 }
 
 .switch a {
   color: var(--accent);
   text-decoration: none;
+  font-weight: 600;
 }
-.switch a:hover { text-decoration: underline; }
 
-/* Multi-path auth styles */
+.switch a:hover {
+  text-decoration: underline;
+}
 
+/* ═══ AUTH OPTIONS ═══ */
 .optionList {
   display: flex;
   flex-direction: column;
@@ -112,14 +135,17 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
-  transition: background 0.15s, border-color 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
 }
+
 .oauthBtn:hover {
   background: var(--surface2);
   border-color: var(--border2);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
 }
 
 .altBtn {
@@ -144,38 +170,50 @@
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--surface2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--text2);
-  line-height: 1.5;
+  line-height: 1.55;
+  font-weight: 450;
 }
-.guestInfo span { font-size: 20px; flex-shrink: 0; }
+
+.guestInfo span {
+  font-size: 20px;
+  flex-shrink: 0;
+}
 
 .fieldHint {
   font-size: 11px;
   color: var(--text3);
   margin-top: -2px;
+  font-weight: 400;
 }
 
 .profileNote {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: var(--radius-sm);
   background: var(--surface2);
+  border: 1px solid var(--border);
   color: var(--text2);
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.55;
+  font-weight: 450;
 }
 
 .divider {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: var(--text3);
   font-size: 12px;
+  font-weight: 500;
 }
-.divider::before, .divider::after {
+
+.divider::before,
+.divider::after {
   content: '';
   flex: 1;
   height: 1px;
@@ -186,6 +224,7 @@
   width: 100%;
   justify-content: center;
   font-size: 13px;
+  font-weight: 600;
   padding: 8px;
 }
 

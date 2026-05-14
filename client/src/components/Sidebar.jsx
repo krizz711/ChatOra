@@ -136,7 +136,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
       {/* User info */}
       <div className={styles.userInfo}>
         <div className="avatar">{user?.avatar_url
-          ? <img src={user.avatar_url} alt={user.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+          ? <img src={user.avatar_url} alt={user.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           : initials(user?.username)}
         </div>
         <div>
@@ -288,7 +288,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
               >
                 <div className="avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
                   {u.avatar_url
-                    ? <img src={u.avatar_url} alt={u.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                    ? <img src={u.avatar_url} alt={u.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                     : u.username?.slice(0, 2).toUpperCase()}
                 </div>
                 <div className={styles.userContent}>

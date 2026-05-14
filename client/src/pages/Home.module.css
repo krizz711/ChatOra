@@ -1,10 +1,13 @@
+/* ═══════════════════════════════════════════
+   HOME LAYOUT
+   ═══════════════════════════════════════════ */
+
 .layout {
   display: flex;
   height: 100vh;
   overflow: hidden;
   position: relative;
   background: transparent;
-  transition: all 0.3s ease;
 }
 
 .main {
@@ -12,10 +15,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(8px);
-  transition: all 0.3s ease;
 }
 
+/* ═══ WELCOME SCREEN ═══ */
 .welcome {
   flex: 1;
   display: flex;
@@ -30,59 +32,71 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 40px;
-  border-radius: 24px;
+  padding: 48px 56px;
+  border-radius: 20px;
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateY(0);
+  animation: welcomeEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 420px;
+}
+
+@keyframes welcomeEntry {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .welcomeInner:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(30, 41, 59, 0.08);
-}
-
-html.dark-mode .welcomeInner {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
+  border-color: var(--accent);
 }
 
 html.dark-mode .welcomeInner:hover {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
 }
 
 .welcomeLogo {
-  font-size: 44px;
-  font-weight: 700;
+  font-size: 36px;
+  font-weight: 800;
   color: var(--accent);
-  opacity: 0.5;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.05em;
+  line-height: 1;
 }
 
 .welcomeInner p {
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--text2);
+  font-weight: 450;
 }
 
 .hint {
   font-size: 12px;
-  opacity: 0.7;
   color: var(--text3);
+  font-weight: 400;
 }
 
+/* ═══ PRIVATE CHAT POPUP ═══ */
 .privateWrap {
   position: fixed;
   bottom: 20px;
   right: 20px;
   z-index: 200;
-  animation: slideInRight 0.3s ease;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Mobile responsive */
+/* ═══ MOBILE ═══ */
 @media (max-width: 900px) {
   .layout {
     flex-direction: column;
@@ -104,12 +118,12 @@ html.dark-mode .welcomeInner:hover {
 
 @media (max-width: 600px) {
   .welcomeInner {
-    padding: 24px;
+    padding: 32px 24px;
     border-radius: 16px;
   }
 
   .welcomeLogo {
-    font-size: 36px;
+    font-size: 28px;
   }
 
   .welcomeInner p {
