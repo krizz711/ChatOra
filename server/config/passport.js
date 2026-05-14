@@ -8,9 +8,9 @@ if (!process.env.SERVER_URL) throw new Error('SERVER_URL env var is required for
 if (!process.env.GOOGLE_CLIENT_ID) throw new Error('GOOGLE_CLIENT_ID env var is required for Google OAuth');
 if (!process.env.GOOGLE_CLIENT_SECRET) throw new Error('GOOGLE_CLIENT_SECRET env var is required for Google OAuth');
 
-console.log('🔐 Google OAuth Configuration:');
-console.log(`   CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? '✓ Set' : '❌ MISSING'}`);
-console.log(`   CLIENT_SECRET: ${process.env.GOOGLE_CLIENT_SECRET ? '✓ Set' : '❌ MISSING'}`);
+console.log('Google OAuth Configuration:');
+console.log(`   CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? 'Set' : 'MISSING'}`);
+console.log(`   CLIENT_SECRET: ${process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'MISSING'}`);
 console.log(`   SERVER_URL: ${process.env.SERVER_URL || 'http://localhost:5000'}`);
 console.log(`   CALLBACK_URL: ${process.env.SERVER_URL}/api/auth/google/callback`);
 
@@ -41,7 +41,7 @@ async function buildInsertPayload(raw) {
   for (const k of always) {
     if (raw[k] !== undefined) payload[k] = raw[k];
   }
-  // Optional columns — only include if they exist in DB
+  // Optional columns: only include if they exist in DB
   const optional = ['google_id', 'auth_provider', 'country', 'state', 'gender', 'age'];
   for (const k of optional) {
     if (raw[k] !== undefined && await colExists(k)) {
@@ -58,7 +58,7 @@ passport.use(new GoogleStrategy({
 },
 async (accessToken, refreshToken, profile, done) => {
   try {
-    console.log('✅ Google OAuth Profile Received:', {
+    console.log('Google OAuth Profile Received:', {
       id: profile.id,
       email: profile.emails?.[0]?.value,
       displayName: profile.displayName,
@@ -111,7 +111,7 @@ async (accessToken, refreshToken, profile, done) => {
     }
 
     if (!user) {
-      // New user — create account
+      // New user: create account
       let baseUsername = name.replace(/\s+/g, '_').toLowerCase().slice(0, 20);
       let username = baseUsername;
       let attempt = 0;
@@ -139,7 +139,7 @@ async (accessToken, refreshToken, profile, done) => {
         .single();
 
       if (error) {
-        console.error('❌ Failed to create Google user:', error);
+        console.error('Failed to create Google user:', error);
         return done(error);
       }
       user = created;
@@ -148,7 +148,7 @@ async (accessToken, refreshToken, profile, done) => {
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
     return done(null, { user, token });
   } catch (err) {
-    console.error('❌ Google OAuth strategy error:', err);
+    console.error('Google OAuth strategy error:', err);
     return done(err);
   }
 }));

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { clearStoredToken } from '../utils/token';
 import axios from 'axios';
 
 const SERVER = import.meta.env.VITE_SERVER_URL || '';
@@ -26,7 +27,7 @@ export default function AuthCallback() {
           navigate('/');
         }
       } catch (err) {
-        try { localStorage.removeItem('token'); } catch {};
+        clearStoredToken();
         navigate('/login?error=auth_failed');
       }
     };

@@ -30,7 +30,7 @@ const io = new Server(httpServer, {
   pingInterval: 25000,
 });
 
-// ── Middleware ──────────────────────────────────────────────────
+// Middleware
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || normalizeOrigin(origin) === allowedOrigin) {
@@ -53,19 +53,19 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ── Routes ──────────────────────────────────────────────────────
+// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/upload', require('./routes/upload'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
-// ── Socket.io Auth + Handler ────────────────────────────────────
+// Socket.io Auth + Handler
 io.use(socketAuth);
 socketHandler(io);
 
-// ── Start Server ────────────────────────────────────────────────
+// Start Server
 const PORT = process.env.PORT || 8080;
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

@@ -21,9 +21,21 @@ export const usePrivateChat = (currentUserId) => {
         });
       };
 
-      socket.on('private:receive', onPrivateMessage);
+      const onPrivateHistory = ({ withUserId, messages }) => {
+        if (!withUserId) return;
+        setConversations(prev => ({
+          ...prev,
+          [withUserId]: (Array.isArray(messages) ? messages : []).slice(-MAX_MESSAGES),
+        }));
+      };
 
-      return () => socket.off('private:receive', onPrivateMessage);
+      socket.on('private:receive', onPrivateMessage);
+      socket.on('private:history', onPrivateHistory);
+
+      return () => {
+        socket.off('private:receive', onPrivateMessage);
+        socket.off('private:history', onPrivateHistory);
+      };
     };
 
     let cleanup = subscribe(currentSocket);
@@ -53,7 +65,11 @@ export const usePrivateChat = (currentUserId) => {
     socket.emit('private:send', { toUserId, fileUrl, fileName, fileType });
   }, []);
 
-  const openChat = (userId) => setActiveChat(userId);
+  const openChat = (userId) => {
+    setActiveChat(userId);
+    const socket = getSocket();
+    if (socket && userId) socket.emit('private:history', { withUserId: userId });
+  };
   const closeChat = () => setActiveChat(null);
   const getMessages = (userId) => conversations[userId] || [];
 

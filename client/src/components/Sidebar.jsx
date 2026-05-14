@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { fetchGroups, createGroup, joinGroup, joinByInvite, leaveGroup } from '../utils/api';
@@ -15,6 +15,10 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
   const [inviteCode, setInviteCode] = useState('');
   const [copiedCode, setCopiedCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [activePanel, setActivePanel] = useState('rooms');
+  const [userSearch, setUserSearch] = useState('');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [userSort, setUserSort] = useState('popularity');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return document.documentElement.classList.contains('dark-mode');
   });
@@ -74,6 +78,33 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
   };
 
   const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
+  const sameLocationRank = (u) => {
+    const sameState = user?.state && u.state && user.state.toLowerCase() === u.state.toLowerCase();
+    const sameCountry = user?.country && u.country && user.country.toLowerCase() === u.country.toLowerCase();
+    if (sameState) return 2;
+    if (sameCountry) return 1;
+    return 0;
+  };
+
+  const filteredOnlineUsers = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    return [...(onlineUsers || [])]
+      .filter(u => {
+        if (genderFilter !== 'all' && u.gender !== genderFilter) return false;
+        if (!q) return true;
+        return [u.username, u.country, u.state]
+          .filter(Boolean)
+          .some(value => value.toLowerCase().includes(q));
+      })
+      .sort((a, b) => {
+        if (userSort === 'nearest') {
+          const byLocation = sameLocationRank(b) - sameLocationRank(a);
+          if (byLocation) return byLocation;
+        }
+        if (userSort === 'name') return (a.username || '').localeCompare(b.username || '');
+        return (b.stars || 0) - (a.stars || 0);
+      });
+  }, [onlineUsers, userSearch, genderFilter, userSort, user?.country, user?.state]);
 
   return (
     <div className={styles.sidebar}>
@@ -81,8 +112,13 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
       <div className={styles.header}>
         <span className={styles.logo}>NexChat</span>
         <div className={styles.headerActions}>
-          <button className={styles.themeToggle} onClick={toggleTheme} title="Toggle theme">
-            {isDarkMode ? '☀️' : '🌙'}
+          <button
+            className={styles.themeToggle}
+            onClick={toggleTheme}
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <span className={`${styles.themeIcon} ${isDarkMode ? styles.sunIcon : styles.moonIcon}`} />
           </button>
           <button className={styles.iconBtn} onClick={() => navigate('/profile')} title="Profile">
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -114,9 +150,21 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
         </div>
       </div>
 
+      <div className={styles.tabs}>
+        <button className={`${styles.tabBtn} ${activePanel === 'rooms' ? styles.tabActive : ''}`} onClick={() => setActivePanel('rooms')}>
+          Rooms
+        </button>
+        <button className={`${styles.tabBtn} ${activePanel === 'active' ? styles.tabActive : ''}`} onClick={() => setActivePanel('active')}>
+          Active
+        </button>
+        <button className={`${styles.tabBtn} ${activePanel === 'discover' ? styles.tabActive : ''}`} onClick={() => setActivePanel('discover')}>
+          Discover
+        </button>
+      </div>
+
       <div className={styles.scroll}>
         {/* Global Rooms */}
-        <div className={styles.section}>
+        {activePanel === 'rooms' && <div className={styles.section}>
           <div className={styles.sectionLabel}>Global Rooms</div>
           {groups.globalGroups?.map(g => (
             <button key={g.id} className={`${styles.roomBtn} ${activeRoom?.id === g.id ? styles.active : ''}`}
@@ -124,10 +172,10 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
               <span className={styles.roomName}>{g.name}</span>
             </button>
           ))}
-        </div>
+        </div>}
 
         {/* My Groups */}
-        <div className={styles.section}>
+        {activePanel === 'rooms' && <div className={styles.section}>
           <div className={styles.sectionHeader}>
             <div className={styles.sectionLabel}>My Groups</div>
             <button className={styles.addBtn} onClick={() => setShowCreate(!showCreate)}>+</button>
@@ -152,15 +200,15 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
             <button key={g.id} className={`${styles.roomBtn} ${activeRoom?.id === g.id ? styles.active : ''}`}
               onClick={() => onRoomSelect(g)}>
               <span className={styles.roomName}>
-                {g.is_private ? '🔒 ' : ''}{g.name}
+                {g.is_private ? '[Private] ' : ''}{g.name}
               </span>
               {g.invite_code && (
                 <span className={styles.codeChip} onClick={e => { e.stopPropagation(); copyCode(g.invite_code); }}
                   title="Copy invite code">
-                  {copiedCode === g.invite_code ? '✓' : g.invite_code}
+                  {copiedCode === g.invite_code ? 'Copied' : g.invite_code}
                 </span>
               )}
-              <span className={styles.leaveBtn} onClick={e => handleLeave(g.id, e)} title="Leave">✕</span>
+              <span className={styles.leaveBtn} onClick={e => handleLeave(g.id, e)} title="Leave">x</span>
             </button>
           ))}
 
@@ -179,12 +227,12 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
               </div>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Public Groups */}
-        {groups.publicGroups?.length > 0 && (
+        {activePanel === 'discover' && groups.publicGroups?.length > 0 && (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Discover</div>
+            <div className={styles.sectionLabel}>Public Rooms</div>
             {groups.publicGroups.filter(g =>
               !groups.userGroups?.find(ug => ug.id === g.id)
             ).slice(0, 10).map(g => (
@@ -195,16 +243,47 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
             ))}
           </div>
         )}
+        {activePanel === 'discover' && !groups.publicGroups?.length && (
+          <div className={styles.emptyState}>No public rooms available yet.</div>
+        )}
 
         {/* Online Users */}
-        {onlineUsers?.length > 0 && (
+        {activePanel === 'active' && (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Popular Chatters — {onlineUsers.length}</div>
-            {onlineUsers.map(u => (
-              <button
+            <div className={styles.sectionLabel}>Active Users - {onlineUsers?.length || 0}</div>
+            <div className={styles.userFilters}>
+              <input
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                placeholder="Search active users"
+              />
+              <div className={styles.filterRow}>
+                <select value={userSort} onChange={e => setUserSort(e.target.value)}>
+                  <option value="popularity">Most starred</option>
+                  <option value="nearest">Nearest</option>
+                  <option value="name">Name</option>
+                </select>
+                <select value={genderFilter} onChange={e => setGenderFilter(e.target.value)}>
+                  <option value="all">All genders</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            {filteredOnlineUsers.length === 0 && (
+              <div className={styles.emptyState}>No active users match these filters.</div>
+            )}
+
+            {filteredOnlineUsers.map(u => (
+              <div
                 key={u.id}
                 className={styles.userBtn}
                 onClick={() => onUserClick(u)}
+                onKeyDown={(e) => e.key === 'Enter' && onUserClick(u)}
+                role="button"
+                tabIndex={0}
                 title={`Message ${u.username}`}
               >
                 <div className="avatar" style={{width:28,height:28,fontSize:11}}>
@@ -216,6 +295,16 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                   <span className={styles.userName}>{u.username}</span>
                   <div className={styles.userMeta}>
                     <button
+                      className={styles.profileSmall}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/profile?user=${u.id}`);
+                      }}
+                    >
+                      Profile
+                    </button>
+                    <button
                       className={`${styles.starBtn} ${u.starredByMe ? styles.starred : ''}`}
                       type="button"
                       onClick={(e) => {
@@ -225,12 +314,13 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                       disabled={starringUserId === u.id || u.id?.startsWith('guest_') || u.id === user?.id}
                       title={u.starredByMe ? 'Already starred' : 'Star this chatter'}
                     >
-                      {u.starredByMe ? '★' : '☆'} {u.stars || 0}
+                      <span className={styles.starIcon} aria-hidden="true" />
+                      {u.stars || 0}
                     </button>
                     <span className={styles.onlineDot} />
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}

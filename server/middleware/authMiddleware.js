@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
-
-const authUserColumns = 'id, username, email, avatar_url, bio, star_count, created_at';
+const { getUserColumns } = require('../db/userColumns');
 
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -35,6 +34,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     // Registered user path — DB lookup
+    const authUserColumns = await getUserColumns();
     const { data: user, error } = await supabase
       .from('users')
       .select(authUserColumns)
@@ -78,6 +78,7 @@ const socketAuth = async (socket, next) => {
     }
 
     // Registered user path
+    const authUserColumns = await getUserColumns();
     const { data: user, error } = await supabase
       .from('users')
       .select(authUserColumns)

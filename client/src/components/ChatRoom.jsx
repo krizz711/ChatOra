@@ -89,10 +89,10 @@ export default function ChatRoom({ room, onUserClick }) {
             {showDownload && (
               <div className={styles.dropdown}>
                 <button onClick={() => { downloadChatTxt(messages, room.name); setShowDownload(false); }}>
-                  📄 Download as .txt
+                  Download as .txt
                 </button>
                 <button onClick={() => { downloadChatZip(messages, room.name); setShowDownload(false); }}>
-                  📦 Download as .zip (includes files)
+                  Download as .zip (includes files)
                 </button>
               </div>
             )}
@@ -104,7 +104,6 @@ export default function ChatRoom({ room, onUserClick }) {
       <div className={styles.messages}>
         {messages.length === 0 && (
           <div className={styles.empty}>
-            <div className={styles.emptyIcon}>💬</div>
             <div>No messages yet. Say hello!</div>
           </div>
         )}
@@ -137,7 +136,7 @@ export default function ChatRoom({ room, onUserClick }) {
                 )}
 
                 {msg.replyTo && (
-                  <div className={styles.replyBadge}>↩ Replying to message</div>
+                  <div className={styles.replyBadge}>Replying to message</div>
                 )}
 
                 <div className={`${styles.bubble} ${isMine ? styles.bubbleMine : styles.bubbleOther} ${glowClass}`}
@@ -155,7 +154,7 @@ export default function ChatRoom({ room, onUserClick }) {
                       ) : (
                         <div className={styles.fileCard}>
                           <div className={styles.fileIcon}>
-                            {msg.fileType === 'application/pdf' ? '📄' : '📎'}
+                            {msg.fileType === 'application/pdf' ? 'PDF' : 'File'}
                           </div>
                           <div>
                             <div className={styles.fileName}>{msg.fileName}</div>
@@ -169,7 +168,7 @@ export default function ChatRoom({ room, onUserClick }) {
                         className={styles.dlBtn}
                         onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)}
                       >
-                        ↓ Download
+                        Download
                       </button>
                     </div>
                   )}
@@ -198,8 +197,8 @@ export default function ChatRoom({ room, onUserClick }) {
       {/* Reply banner */}
       {replyTo && (
         <div className={styles.replyBanner}>
-          <span>↩ Replying to <strong>{replyTo.sender.username}</strong>: {replyTo.text?.slice(0, 50)}</span>
-          <button onClick={() => setReplyTo(null)}>✕</button>
+          <span>Replying to <strong>{replyTo.sender.username}</strong>: {replyTo.text?.slice(0, 50)}</span>
+          <button onClick={() => setReplyTo(null)}>x</button>
         </div>
       )}
 

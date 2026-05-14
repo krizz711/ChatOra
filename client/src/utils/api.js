@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getStoredToken } from './token';
 
 const SERVER = import.meta.env.VITE_SERVER_URL || '';
 
@@ -6,7 +7,7 @@ export const api = axios.create({ baseURL: `${SERVER}/api` });
 
 // Auto attach token
 api.interceptors.request.use(cfg => {
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
   if (token) cfg.headers.Authorization = `Bearer ${token}`;
   return cfg;
 });

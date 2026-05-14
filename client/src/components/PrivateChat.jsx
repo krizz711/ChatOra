@@ -56,17 +56,18 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
             disabled={starringUserId === targetUser.id || targetUser.id?.startsWith('guest_')}
             title={targetUser.starredByMe ? 'Unstar this chatter' : 'Star this chatter'}
           >
-            {targetUser.starredByMe ? '★' : '☆'} {targetUser.stars || 0}
+            <span className={styles.starIcon} aria-hidden="true" />
+            {targetUser.stars || 0}
           </button>
         </div>
         <div style={{display:'flex',gap:4}}>
           <button className={styles.iconBtn} onClick={() => onViewProfile?.(targetUser)} title="View profile">
-            👤
+            Profile
           </button>
           <button className={styles.iconBtn} onClick={() => downloadChatTxt(messages, `DM_${targetUser.username}`)} title="Download">
-            ↓
+            Save
           </button>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose}>x</button>
         </div>
       </div>
 
@@ -82,7 +83,7 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
                 {msg.type === 'file' ? (
                   isImage(msg.fileType)
                     ? <img src={msg.fileUrl} alt={msg.fileName} className={styles.img} onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)} />
-                    : <div className={styles.file}>📎 {msg.fileName} <button type="button" onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)}>Open</button> <button type="button" onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)}>↓</button></div>
+                    : <div className={styles.file}>File: {msg.fileName} <button type="button" onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)}>Open</button> <button type="button" onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)}>Save</button></div>
                 ) : (
                   <span>{msg.text}</span>
                 )}
@@ -98,7 +99,7 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
 
       <div className={styles.inputArea}>
         <input type="file" ref={fileRef} onChange={handleFile} style={{display:'none'}} accept="image/*,.pdf,.txt" />
-        <button className={styles.attachBtn} onClick={() => fileRef.current?.click()}>📎</button>
+        <button className={styles.attachBtn} onClick={() => fileRef.current?.click()}>Attach</button>
         <input
           className={styles.input}
           value={text}
@@ -106,7 +107,7 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
           onKeyDown={handleKeyDown}
           placeholder={`Message ${targetUser.username}...`}
         />
-        <button className={styles.sendBtn} onClick={handleSend} disabled={!text.trim()}>→</button>
+        <button className={styles.sendBtn} onClick={handleSend} disabled={!text.trim()}>Send</button>
       </div>
     </div>
   );

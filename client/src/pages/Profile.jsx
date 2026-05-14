@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, uploadAvatar } from '../utils/api';
+import { getStoredToken } from '../utils/token';
 import axios from 'axios';
 import styles from './Profile.module.css';
 
@@ -27,6 +28,12 @@ export default function Profile() {
 
   const SERVER = import.meta.env.VITE_SERVER_URL || '';
   const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
+  const StarBadge = ({ count }) => (
+    <span className={styles.starBadge}>
+      <span className={styles.starIcon} aria-hidden="true" />
+      {count || 0}
+    </span>
+  );
 
   useEffect(() => {
     setForm({
@@ -44,7 +51,7 @@ export default function Profile() {
     const userId = searchParams.get('user');
     if (userId) {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = getStoredToken();
       axios.get(`${SERVER}/api/auth/users/${userId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -66,7 +73,7 @@ export default function Profile() {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <button className={styles.back} onClick={() => navigate('/')}>← Back to chat</button>
+          <button className={styles.back} onClick={() => navigate('/')}>Back to chat</button>
           <h1 className={styles.title}>Guest Session</h1>
           <div style={{ padding: '20px 0', color: 'var(--text2)', fontSize: 14, lineHeight: 1.7 }}>
             <p>You're chatting as <strong>{user.username}</strong> (guest).</p>
@@ -102,7 +109,7 @@ export default function Profile() {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <button className={styles.back} onClick={() => navigate(-1)}>← Back</button>
+          <button className={styles.back} onClick={() => navigate(-1)}>Back</button>
 
           <h1 className={styles.title}>{viewingUser.username}'s Profile</h1>
 
@@ -118,7 +125,7 @@ export default function Profile() {
             <div className={styles.identity}>
               <h2>{viewingUser.username}</h2>
               <p>{viewingUser.bio || 'No bio yet.'}</p>
-              <div className={styles.popularityBadge}>Popularity score: {viewingUser.star_count || 0}</div>
+              <StarBadge count={viewingUser.star_count} />
             </div>
           </div>
 
@@ -145,8 +152,8 @@ export default function Profile() {
                 <span>{viewingUser.age || 'Not provided'}</span>
               </div>
               <div className={styles.infoRow}>
-                <span>Popularity score</span>
-                <span>{viewingUser.star_count || 0}</span>
+                <span>Stars</span>
+                <StarBadge count={viewingUser.star_count} />
               </div>
           </div>
 
@@ -209,7 +216,7 @@ export default function Profile() {
           <div className={styles.identity}>
             <h2>{user?.username}</h2>
             <p>{user?.bio || 'Set your bio to help others know you better.'}</p>
-            <div className={styles.popularityBadge}>Popularity score: {user?.star_count || 0}</div>
+            <StarBadge count={user?.star_count} />
             <input type="file" ref={fileRef} onChange={handleAvatarChange}
               accept="image/*" style={{display:'none'}} />
             <button className="btn btn-ghost" onClick={() => fileRef.current?.click()} disabled={uploading}>
@@ -289,8 +296,8 @@ export default function Profile() {
             <span>{user?.age || 'Not provided'}</span>
           </div>
           <div className={styles.infoRow}>
-            <span>Popularity score</span>
-            <span>{user?.star_count || 0}</span>
+            <span>Stars</span>
+            <StarBadge count={user?.star_count} />
           </div>
         </div>
       </div>

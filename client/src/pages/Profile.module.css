@@ -119,17 +119,26 @@
   max-width: 420px;
 }
 
-.popularityBadge {
+.starBadge {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   width: fit-content;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(146, 204, 255, 0.14);
-  border: 1px solid rgba(146, 204, 255, 0.25);
-  color: var(--text2);
+  background: rgba(245, 179, 1, 0.14);
+  border: 1px solid rgba(245, 179, 1, 0.38);
+  color: #f5b301;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 800;
+}
+
+.starIcon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  clip-path: polygon(50% 0%, 61% 34%, 98% 34%, 68% 55%, 79% 90%, 50% 68%, 21% 90%, 32% 55%, 2% 34%, 39% 34%);
 }
 
 .avatarHint { font-size: 11px; color: var(--text3); margin-top: 6px; }

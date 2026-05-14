@@ -1,11 +1,12 @@
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { format } from 'date-fns';
+import { getStoredToken } from './token';
 
 const SERVER = import.meta.env.VITE_SERVER_URL || '';
 
 const fetchViaProxy = async (url) => {
-  const token = localStorage.getItem('token');
+  const token = getStoredToken();
   const proxyUrl = `${SERVER}/api/upload/fetch?url=${encodeURIComponent(url)}`;
   const res = await fetch(proxyUrl, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
