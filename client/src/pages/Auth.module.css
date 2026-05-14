@@ -54,6 +54,16 @@
   gap: 6px;
 }
 
+.field select {
+  width: 100%;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .field label {
   font-size: 12px;
   font-weight: 500;
@@ -82,3 +92,105 @@
   text-decoration: none;
 }
 .switch a:hover { text-decoration: underline; }
+
+/* Multi-path auth styles */
+
+.optionList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.oauthBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  transition: background 0.15s, border-color 0.15s;
+  cursor: pointer;
+}
+.oauthBtn:hover {
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+
+.altBtn {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+}
+
+.guestBtn {
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+}
+
+.guestHint {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 400;
+}
+
+.guestInfo {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.guestInfo span { font-size: 20px; flex-shrink: 0; }
+
+.fieldHint {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: -2px;
+}
+
+.profileNote {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text3);
+  font-size: 12px;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.backBtn {
+  width: 100%;
+  justify-content: center;
+  font-size: 13px;
+  padding: 8px;
+}
+
+@media (max-width: 520px) {
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}

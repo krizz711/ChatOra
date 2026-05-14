@@ -14,16 +14,22 @@ export const useChat = (roomId) => {
     const socket = getSocket();
     if (!socket) return;
 
-    // Join room
-    socket.emit('room:join', { roomId });
-
     // Receive messages
+    const onHistory = ({ roomId: rid, messages: history }) => {
+      if (rid !== roomId) return;
+      setMessages(Array.isArray(history) ? history : []);
+    };
+
     const onMessage = (msg) => {
       if (msg.roomId !== roomId) return;
       setMessages(prev => {
         const updated = [...prev, msg];
         return updated.slice(-MAX_MESSAGES); // keep last 200
       });
+    };
+
+    const onError = ({ error }) => {
+      if (error) alert(error);
     };
 
     // Typing
@@ -41,13 +47,20 @@ export const useChat = (roomId) => {
       if (rid === roomId) setOnlineCount(count);
     };
 
+    socket.on('message:history', onHistory);
     socket.on('message:receive', onMessage);
+    socket.on('message:error', onError);
     socket.on('typing:update', onTyping);
     socket.on('room:count', onCount);
 
+    // Join room after listeners are in place
+    socket.emit('room:join', { roomId });
+
     return () => {
       socket.emit('room:leave', { roomId });
+      socket.off('message:history', onHistory);
       socket.off('message:receive', onMessage);
+      socket.off('message:error', onError);
       socket.off('typing:update', onTyping);
       socket.off('room:count', onCount);
       setMessages([]); // clear on room leave
@@ -72,7 +85,11 @@ export const useChat = (roomId) => {
     if (!socket) return;
     socket.emit('typing:start', { roomId });
     if (typingRef.current) clearTimeout(typingRef.current);
-    typingRef.current = setTimeout(() => sendTypingStop(), 3000);
+    typingRef.current = setTimeout(() => {
+      const s = getSocket();
+      if (s) s.emit('typing:stop', { roomId });
+      if (typingRef.current) clearTimeout(typingRef.current);
+    }, 3000);
   }, [roomId]);
 
   const sendTypingStop = useCallback(() => {

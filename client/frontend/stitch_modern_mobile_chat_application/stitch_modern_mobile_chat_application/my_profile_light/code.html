@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-bright": "#faf9fe",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-fixed-variant": "#00531c",
+            "error-container": "#ffdad6",
+            "tertiary-fixed": "#ffdcbf",
+            "secondary-container": "#6ffb85",
+            "on-primary-fixed-variant": "#004b73",
+            "on-primary-fixed": "#001d31",
+            "inverse-surface": "#2f3034",
+            "inverse-on-surface": "#f1f0f5",
+            "tertiary-fixed-dim": "#ffb874",
+            "on-tertiary-fixed-variant": "#6a3b00",
+            "on-error": "#ffffff",
+            "surface-container-highest": "#e3e2e7",
+            "on-error-container": "#93000a",
+            "primary-fixed-dim": "#92ccff",
+            "tertiary-container": "#ac6300",
+            "outline-variant": "#bfc7d2",
+            "surface-dim": "#dad9df",
+            "on-primary-container": "#fdfcff",
+            "primary-fixed": "#cce5ff",
+            "surface-variant": "#e3e2e7",
+            "background": "#faf9fe",
+            "on-primary": "#ffffff",
+            "on-secondary-fixed": "#002107",
+            "primary": "#006193",
+            "tertiary": "#894d00",
+            "inverse-primary": "#92ccff",
+            "secondary-fixed-dim": "#53e16f",
+            "surface-container-high": "#e9e7ed",
+            "on-background": "#1a1b1f",
+            "on-secondary": "#ffffff",
+            "primary-container": "#007bb9",
+            "on-tertiary-container": "#fffbff",
+            "surface-tint": "#006497",
+            "secondary-fixed": "#72fe88",
+            "surface-container": "#eeedf3",
+            "on-secondary-container": "#00732a",
+            "on-tertiary": "#ffffff",
+            "secondary": "#006e28",
+            "error": "#ba1a1a",
+            "outline": "#6f7881",
+            "surface-container-low": "#f4f3f8",
+            "surface": "#faf9fe",
+            "on-surface-variant": "#3f4850",
+            "on-tertiary-fixed": "#2d1600",
+            "on-surface": "#1a1b1f"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin-mobile": "20px",
+            "margin-desktop": "40px",
+            "unit": "4px",
+            "xs": "4px",
+            "md": "16px",
+            "lg": "24px",
+            "xl": "32px",
+            "gutter": "16px",
+            "sm": "8px"
+          },
+          "fontFamily": {
+            "body-lg": ["Inter"],
+            "headline-lg-mobile": ["Inter"],
+            "headline-lg": ["Inter"],
+            "headline-md": ["Inter"],
+            "label-md": ["Inter"],
+            "title-lg": ["Inter"],
+            "display-lg": ["Inter"],
+            "body-md": ["Inter"]
+          },
+          "fontSize": {
+            "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+            "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+            "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+            "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body { font-family: 'Inter', sans-serif; }
+    .glass-effect {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    .profile-card-shadow {
+      shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-bright text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-surface-bright/80 backdrop-blur-xl shadow-sm">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant/30">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A high-quality professional studio portrait of a friendly man with short dark hair and a neat beard. The background is a soft, out-of-focus neutral grey, creating a clean and modern professional profile aesthetic. The lighting is bright and even, highlighting facial details with a sophisticated, premium digital feel consistent with a tech-focused user profile page." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtL3WO7x4LOIKOJaYAL4XJ6JuYKBLjp-Aghe6_02J2lpMhr6k801ytXunSOJTQrJj8n7mXr2aBPcEyxOC13omKmtfItyqaJ_uI7a2D-we_ue2TKZVUM9MNB6fJSAd7H_dY6QJT7MJnro3X6nEDRDYJTMUR9w5v5QHelP58XFKL-pE5TAm4V8Lz3lwJ0QuuM1FzMKgsW6V5dpUb6lTpdGy8AIOlp9UewoGllOB-tjjYPORXgnbjLKeq8l_7eZJA2bVgQw96teKTJ8qD"/>
+</div>
+<h1 class="font-title-lg text-title-lg text-primary">Messenger</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity p-2" data-icon="search">search</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity p-2" data-icon="more_vert">more_vert</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-20 px-margin-mobile max-w-4xl mx-auto space-y-lg">
+<!-- Hero Profile Section -->
+<section class="bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/10">
+<div class="flex flex-col items-center sm:flex-row sm:items-start gap-lg">
+<div class="relative">
+<div class="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden ring-4 ring-primary-container/20">
+<img alt="Ivan Efimov" class="w-full h-full object-cover" data-alt="A detailed, close-up professional profile headshot of a young creative professional with a friendly smile. The image is set against a blurred office environment with soft blue and white highlights, reinforcing a clean, airy, and modern tech atmosphere. The lighting is high-key and soft, suggesting a high-end digital communication platform user profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5PvRLksAxmHL62jqRxS7uD0bfstwM3-um-K79k0TVovtsfUzTUUbwn2UGFASlCJM5H_zzaiXjNnHebsygWQakMLUg2K7rAAZxazZ4bjyXhy7M-RUVryyNw6Gey86pOo3S3QtTCDwQpUsu8r5sij_nVAhDxod7RlDonvMMCaoHJ6YOaL86ceYl0W6OGboAjTEgTdBjhOt7OEdcOSPQjfVebo82LmvsDuJk7FjtZj8985cY2LgmdkQWvwxUywmW0hJPkfrQLojKCmbF"/>
+</div>
+<div class="absolute bottom-1 right-1 bg-secondary-fixed-dim p-1.5 rounded-full border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[16px] text-on-secondary-fixed" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<div class="flex-1 flex flex-col items-center sm:items-start text-center sm:text-left">
+<div class="flex items-center gap-sm mb-xs">
+<h2 class="font-headline-md text-headline-md text-on-background">Ivan Efimov</h2>
+<span class="bg-primary-container/10 text-primary px-sm py-0.5 rounded-lg font-label-md text-label-md">PRO</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant font-body-md text-body-md mb-md">
+<span class="material-symbols-outlined text-[18px]" data-icon="location_on">location_on</span>
+<span>Limassol, Cyprus</span>
+</div>
+<div class="flex gap-sm w-full sm:w-auto">
+<button class="flex-1 sm:flex-none px-xl py-3 bg-primary-container text-on-primary-container rounded-xl font-title-lg text-title-lg hover:opacity-90 active:scale-95 transition-all shadow-md">
+              Edit Profile
+            </button>
+<button class="flex items-center justify-center w-12 h-12 border border-outline-variant rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Bento Grid Info Cards -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Bio Card -->
+<section class="md:col-span-8 bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/10">
+<h3 class="font-title-lg text-title-lg text-on-background mb-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="person_book">person_book</span>
+          Bio
+        </h3>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+          Product Designer and Digital Artist based in the Mediterranean. I specialize in creating seamless communication experiences and minimal UI systems for high-growth tech companies. Currently redesigning the future of secure messaging.
+        </p>
+</section>
+<!-- Details Column -->
+<div class="md:col-span-4 flex flex-col gap-gutter">
+<div class="bg-surface-container-lowest rounded-xl p-md shadow-sm border border-outline-variant/10 flex items-center gap-md">
+<div class="bg-tertiary-container/10 p-md rounded-xl text-tertiary">
+<span class="material-symbols-outlined" data-icon="cake">cake</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Age</p>
+<p class="font-title-lg text-title-lg text-on-background">28 Years</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-md shadow-sm border border-outline-variant/10 flex items-center gap-md">
+<div class="bg-secondary-container/20 p-md rounded-xl text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="public">public</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Timezone</p>
+<p class="font-title-lg text-title-lg text-on-background">GMT +2</p>
+</div>
+</div>
+</div>
+<!-- Connected Accounts -->
+<section class="md:col-span-12 bg-surface-container-lowest rounded-xl p-lg shadow-sm border border-outline-variant/10">
+<h3 class="font-title-lg text-title-lg text-on-background mb-lg flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="link">link</span>
+          Connected Accounts
+        </h3>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
+<div class="flex items-center gap-md p-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer group">
+<div class="w-10 h-10 rounded-full bg-on-background flex items-center justify-center">
+<img alt="GitHub" class="w-6 h-6 invert" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIifWrGzU0zNufnR18QSO3VjTcBd-IDmlsQCFNFspLyNd-1gvPnej5ODe6P38WZqM80_xDj0HJkfXJSJe-bpTCZUDbxEtv2KcYHSZ8VT-yxfkmLnk1WABV4XNVZoN0wk96GQzgt8YwWJbwV6_CMa4m19becxEUHPF8FZcV9Y5mXop5WVXil0aGNfeRXvrwYwuCDrkRWHmtOBDEHmwY7XKXijTRR_L0gGtDaLMrhP-zT6HSuWJ4K_dk8DEicL8RTVv4VJwHfqhi6jBz"/>
+</div>
+<div class="flex-1">
+<p class="font-title-lg text-title-lg text-on-background">GitHub</p>
+<p class="font-body-md text-body-md text-on-surface-variant">@efimov_design</p>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="open_in_new">open_in_new</span>
+</div>
+<div class="flex items-center gap-md p-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer group">
+<div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary" data-icon="language">language</span>
+</div>
+<div class="flex-1">
+<p class="font-title-lg text-title-lg text-on-background">Website</p>
+<p class="font-body-md text-body-md text-on-surface-variant">efimov.design</p>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="open_in_new">open_in_new</span>
+</div>
+<div class="flex items-center gap-md p-md rounded-xl bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer group">
+<div class="w-10 h-10 rounded-full bg-[#EA4C89] flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="grid_view">grid_view</span>
+</div>
+<div class="flex-1">
+<p class="font-title-lg text-title-lg text-on-background">Dribbble</p>
+<p class="font-body-md text-body-md text-on-surface-variant">ivan_efimov</p>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="open_in_new">open_in_new</span>
+</div>
+</div>
+</section>
+<!-- Settings & Preferences -->
+<section class="md:col-span-12 space-y-md">
+<h3 class="font-title-lg text-title-lg text-on-background px-xs">Settings &amp; Preferences</h3>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm border border-outline-variant/10">
+<div class="p-md flex items-center justify-between border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+</div>
+<div>
+<p class="font-title-lg text-title-lg text-on-background">Privacy &amp; Security</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Two-step verification, blocked users</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="p-md flex items-center justify-between border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-xl bg-secondary-container/50 flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</div>
+<div>
+<p class="font-title-lg text-title-lg text-on-background">Notifications</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Sound, vibration, badge count</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="p-md flex items-center justify-between hover:bg-surface-container-low transition-colors cursor-pointer">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-xl bg-tertiary-fixed flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined" data-icon="palette">palette</span>
+</div>
+<div>
+<p class="font-title-lg text-title-lg text-on-background">Appearance</p>
+<p class="font-body-md text-body-md text-on-surface-variant">Theme, background, text size</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-margin-mobile py-2 bg-surface-bright/80 backdrop-blur-xl shadow-sm">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+<span class="font-label-md text-label-md">Rooms</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">People</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary bg-primary-container/20 rounded-xl px-4 py-1 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+</body></html>

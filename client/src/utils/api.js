@@ -27,6 +27,11 @@ export const joinGroup = (groupId) => api.post(`/groups/join/${groupId}`).then(r
 export const joinByInvite = (code) => api.post(`/groups/join/invite/${code}`).then(r => r.data);
 export const leaveGroup = (groupId) => api.delete(`/groups/leave/${groupId}`).then(r => r.data);
 export const updateProfile = (data) => api.put('/auth/profile', data).then(r => r.data);
+export const fetchStars = (userIds) => {
+  if (!userIds?.length) return Promise.resolve({ counts: {}, starredByMe: [] });
+  return api.get(`/auth/stars?ids=${userIds.join(',')}`).then(r => r.data);
+};
+export const toggleStar = (userId) => api.post(`/auth/star/${userId}`).then(r => r.data);
 export const uploadAvatar = (file) => {
   const form = new FormData();
   form.append('avatar', file);

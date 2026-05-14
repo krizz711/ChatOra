@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messenger - Rooms</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#faf9fe",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed-variant": "#00531c",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdcbf",
+                    "secondary-container": "#6ffb85",
+                    "on-primary-fixed-variant": "#004b73",
+                    "on-primary-fixed": "#001d31",
+                    "inverse-surface": "#2f3034",
+                    "inverse-on-surface": "#f1f0f5",
+                    "tertiary-fixed-dim": "#ffb874",
+                    "on-tertiary-fixed-variant": "#6a3b00",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#e3e2e7",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#92ccff",
+                    "tertiary-container": "#ac6300",
+                    "outline-variant": "#bfc7d2",
+                    "surface-dim": "#dad9df",
+                    "on-primary-container": "#fdfcff",
+                    "primary-fixed": "#cce5ff",
+                    "surface-variant": "#e3e2e7",
+                    "background": "#faf9fe",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed": "#002107",
+                    "primary": "#006193",
+                    "tertiary": "#894d00",
+                    "inverse-primary": "#92ccff",
+                    "secondary-fixed-dim": "#53e16f",
+                    "surface-container-high": "#e9e7ed",
+                    "on-background": "#1a1b1f",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#007bb9",
+                    "on-tertiary-container": "#fffbff",
+                    "surface-tint": "#006497",
+                    "secondary-fixed": "#72fe88",
+                    "surface-container": "#eeedf3",
+                    "on-secondary-container": "#00732a",
+                    "on-tertiary": "#ffffff",
+                    "secondary": "#006e28",
+                    "error": "#ba1a1a",
+                    "outline": "#6f7881",
+                    "surface-container-low": "#f4f3f8",
+                    "surface": "#faf9fe",
+                    "on-surface-variant": "#3f4850",
+                    "on-tertiary-fixed": "#2d1600",
+                    "on-surface": "#1a1b1f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "20px",
+                    "margin-desktop": "40px",
+                    "unit": "4px",
+                    "xs": "4px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "gutter": "16px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 0px;
+            width: 0px;
+        }
+        .chat-bubble-in {
+            border-bottom-left-radius: 4px;
+        }
+        .chat-bubble-out {
+            border-bottom-right-radius: 4px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-bright text-on-surface font-body-lg min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-surface-bright/80 dark:bg-on-background/80 backdrop-blur-xl shadow-sm dark:shadow-none">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" data-alt="A professional close-up portrait of a young man with a friendly expression, set against a clean, minimalist studio background. The lighting is soft and high-key, matching a bright light-mode UI aesthetic. The composition is centered, highlighting clear skin textures and modern grooming, embodying a tech-savvy professional identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9s0ls1oJQKn1PVHoYP9694MxsHCehTaJUNsMaI_qMctgsZS7wgJV_VhJxIZG3HQwbCr1-hepDLu_vuKunQMlACBI0EzKQTm8SChMFFaDFsEvQlV2ulB0Q5hJKksh18fwhXLgJXihMXMQkglTFk0UziWXtlc_RSaUqcGkIZszCibrFzcT_KFwtLts7q3QATm8UdjYF1kHeof5gwB5HPzqQ_QoUQFId71wjl2mkfL9JaAVNxd_-05C8KLIR9q47TGKE85lF4X16bIr7"/>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed-dim">Messenger</h1>
+</div>
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed-dim hover:opacity-80 transition-opacity active:scale-95">search</button>
+</header>
+<!-- Main Content -->
+<main class="pt-20 px-margin-mobile space-y-xl max-w-5xl mx-auto">
+<!-- Global Search / Join -->
+<section class="space-y-md">
+<div class="flex items-center gap-sm bg-surface-container-low p-md rounded-xl shadow-sm">
+<span class="material-symbols-outlined text-on-surface-variant">explore</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-body-md font-body-md placeholder:text-on-surface-variant/60" placeholder="Search Global Rooms or Join via ID..." type="text"/>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg font-label-md text-label-md hover:opacity-90 active:scale-95 transition-all">Join</button>
+</div>
+</section>
+<!-- Trending Section -->
+<section class="space-y-md">
+<div class="flex justify-between items-end">
+<h2 class="font-title-lg text-title-lg text-on-surface">Trending</h2>
+<span class="font-label-md text-label-md text-primary cursor-pointer hover:underline">View All</span>
+</div>
+<div class="flex gap-md overflow-x-auto custom-scrollbar pb-unit">
+<!-- Trending Card 1 -->
+<div class="flex-none w-64 glass-card rounded-2xl overflow-hidden shadow-sm border border-white/20">
+<div class="relative h-40">
+<img class="w-full h-full object-cover" data-alt="A high-tech gaming setup with glowing neon cyan and purple lights reflected on sleek hardware and multiple monitors. The atmosphere is vibrant and energetic, suggesting a futuristic digital space. Soft ambient light illuminates the surrounding workspace, fitting a clean, high-end tech aesthetic with a focus on deep contrasts and saturated colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSssGdess9kqfT7rdviHsMXXLxA7jFkvFOpRmRgqdMJl7ioGA4_ydOo26kA0OV1gRiw6K2vN_A8_1dNeYD-JA4t4JXhzih-cCuBykUjDnRl3g22KPLklFsLt6BiUwBe5MpfbfNac3d_xEGQhYwvE3OvJt_xK0y2iQhsH-H4yDlZJrxfV-D02SE5e9-gEeMAl9fVs_jDbEWWY77P9fkbKyUY2NgFtctlzcMJZsTXz8TG2BgIna5LB5QQ4ZWDz6LdgzF1k1lNVaZi87l"/>
+<div class="absolute top-sm right-sm bg-black/40 backdrop-blur-md px-sm py-xs rounded-full flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px] text-white" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="text-white text-[10px] font-bold">12.4K</span>
+</div>
+</div>
+<div class="p-md space-y-xs">
+<h3 class="font-title-lg text-body-lg font-bold text-on-surface">Cyber Enthusiasts</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1">Hardware, mods, and future tech.</p>
+</div>
+</div>
+<!-- Trending Card 2 -->
+<div class="flex-none w-64 glass-card rounded-2xl overflow-hidden shadow-sm border border-white/20">
+<div class="relative h-40">
+<img class="w-full h-full object-cover" data-alt="A peaceful beach at sunset with soft pastel pink and golden orange hues across the sky and gentle ocean waves. The mood is tranquil and serene, capturing a moment of natural beauty and calm. The lighting is diffused and warm, aligning with a premium, polished design style that emphasizes weightlessness and clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3AYiihYNHmHyZr58rNW4ApVTUj0TJxnAxU5qyjCYcyDA82n6FDex4AADeWXiX-mAv5ib3PnAJvkJSKnsqaP36XBUAlx4oIsRUZCWyDN_3uwenSm9wgQDMYAVpezhjUlhb2c_C6tGAg_2l9Uoj-XxqO5wpL5RvgCMPgqAjDznwhy_1jKMMuB8n92M72HvmVbn6-dZkt6VlreNorvMoIcJHweJLPwhD1Nx_w623Q6OHndiC_4Xu0NKd7AJ23O0L9dp9LGKHhysQApSG"/>
+<div class="absolute top-sm right-sm bg-black/40 backdrop-blur-md px-sm py-xs rounded-full flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px] text-white" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="text-white text-[10px] font-bold">8.1K</span>
+</div>
+</div>
+<div class="p-md space-y-xs">
+<h3 class="font-title-lg text-body-lg font-bold text-on-surface">Digital Nomads</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1">Sharing the best remote spots.</p>
+</div>
+</div>
+<!-- Trending Card 3 -->
+<div class="flex-none w-64 glass-card rounded-2xl overflow-hidden shadow-sm border border-white/20">
+<div class="relative h-40">
+<img class="w-full h-full object-cover" data-alt="A vibrant craft brewery interior with industrial decor, warm Edison bulbs, and rows of stainless steel fermentation tanks. The scene is social and inviting, featuring a sophisticated palette of copper and deep wood tones. The atmosphere is cozy yet modern, perfect for a community-focused digital space in a minimalist UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6lLv_oS4bc3Vo0B2Mna0izfdwrC9JU9rKhaTc5yQwVLFeraC1e8gRGGkimAQJ2fDNdWVe6lonkMTPjRnQqE6aB2RFgkUMDEftPO9UILJvBlw938q4zoeDPdQqF8-tsTiCOX1B6DDi2m_2yywUfrglXUPyuh2iRmnnAYeu2TQgOSYkmofo17xkejdLzJ-ifXnoSIAEGcC3ESHkrXNk0JWREcOubg3gi0KOaEHXtMTYYjp2jOoI5GMcei8kr5fPzYk38cQNXz-EVPHb"/>
+<div class="absolute top-sm right-sm bg-black/40 backdrop-blur-md px-sm py-xs rounded-full flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px] text-white" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="text-white text-[10px] font-bold">5.2K</span>
+</div>
+</div>
+<div class="p-md space-y-xs">
+<h3 class="font-title-lg text-body-lg font-bold text-on-surface">Brewery Talk</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-1">Best hops and community spots.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Your Groups Section -->
+<section class="space-y-md">
+<h2 class="font-title-lg text-title-lg text-on-surface">Your Rooms</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<!-- Group Item 1 -->
+<div class="flex items-center gap-md p-md bg-surface-container-lowest rounded-2xl shadow-sm hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-14 h-14 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">forum</span>
+</div>
+<div class="flex-1">
+<h4 class="font-body-lg font-bold text-on-surface">Design Sync</h4>
+<p class="font-body-md text-on-surface-variant">Active: 14 people</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+<!-- Group Item 2 -->
+<div class="flex items-center gap-md p-md bg-surface-container-lowest rounded-2xl shadow-sm hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-14 h-14 rounded-xl bg-secondary-container/20 flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">diversity_3</span>
+</div>
+<div class="flex-1">
+<h4 class="font-body-lg font-bold text-on-surface">Product Team</h4>
+<p class="font-body-md text-on-surface-variant">2 new messages</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+<!-- Group Item 3 -->
+<div class="flex items-center gap-md p-md bg-surface-container-lowest rounded-2xl shadow-sm hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-14 h-14 rounded-xl bg-tertiary-container/20 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">movie</span>
+</div>
+<div class="flex-1">
+<h4 class="font-body-lg font-bold text-on-surface">Film Club</h4>
+<p class="font-body-md text-on-surface-variant">Next meeting: Friday</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+<!-- Group Item 4 -->
+<div class="flex items-center gap-md p-md bg-surface-container-lowest rounded-2xl shadow-sm hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="w-14 h-14 rounded-xl bg-outline-variant/20 flex items-center justify-center text-outline">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div class="flex-1">
+<h4 class="font-body-lg font-bold text-on-surface">Private Room #42</h4>
+<p class="font-body-md text-on-surface-variant">Encrypted connection</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant group-hover:translate-x-1 transition-transform">chevron_right</span>
+</div>
+</div>
+</section>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-24 right-margin-mobile w-14 h-14 bg-primary text-on-primary rounded-2xl shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-margin-mobile py-2 bg-surface-bright/80 dark:bg-on-background/80 backdrop-blur-xl shadow-sm dark:shadow-none">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-4 py-1 hover:bg-surface-container dark:hover:bg-on-surface/10 rounded-xl transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">People</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/20 rounded-xl px-4 py-1 transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">forum</span>
+<span class="font-label-md text-label-md">Rooms</span>
+</a>
+</nav>
+</body></html>

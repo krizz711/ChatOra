@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messenger - Chat Thread</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#faf9fe",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed-variant": "#00531c",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdcbf",
+                    "secondary-container": "#6ffb85",
+                    "on-primary-fixed-variant": "#004b73",
+                    "on-primary-fixed": "#001d31",
+                    "inverse-surface": "#2f3034",
+                    "inverse-on-surface": "#f1f0f5",
+                    "tertiary-fixed-dim": "#ffb874",
+                    "on-tertiary-fixed-variant": "#6a3b00",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#e3e2e7",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#92ccff",
+                    "tertiary-container": "#ac6300",
+                    "outline-variant": "#bfc7d2",
+                    "surface-dim": "#dad9df",
+                    "on-primary-container": "#fdfcff",
+                    "primary-fixed": "#cce5ff",
+                    "surface-variant": "#e3e2e7",
+                    "background": "#faf9fe",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed": "#002107",
+                    "primary": "#006193",
+                    "tertiary": "#894d00",
+                    "inverse-primary": "#92ccff",
+                    "secondary-fixed-dim": "#53e16f",
+                    "surface-container-high": "#e9e7ed",
+                    "on-background": "#1a1b1f",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#007bb9",
+                    "on-tertiary-container": "#fffbff",
+                    "surface-tint": "#006497",
+                    "secondary-fixed": "#72fe88",
+                    "surface-container": "#eeedf3",
+                    "on-secondary-container": "#00732a",
+                    "on-tertiary": "#ffffff",
+                    "secondary": "#006e28",
+                    "error": "#ba1a1a",
+                    "outline": "#6f7881",
+                    "surface-container-low": "#f4f3f8",
+                    "surface": "#faf9fe",
+                    "on-surface-variant": "#3f4850",
+                    "on-tertiary-fixed": "#2d1600",
+                    "on-surface": "#1a1b1f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "20px",
+                    "margin-desktop": "40px",
+                    "unit": "4px",
+                    "xs": "4px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "gutter": "16px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-header {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .bubble-incoming {
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .bubble-outgoing {
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,97,147,0.1);
+        }
+        .chat-container {
+            height: calc(100dvh - 64px - 88px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-bright text-on-surface font-body-md overflow-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-surface-bright/80 dark:bg-on-background/80 backdrop-blur-xl shadow-sm">
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity active:scale-95 duration-200">arrow_back</button>
+<div class="relative">
+<img alt="Ivan Efimov" class="w-10 h-10 rounded-full object-cover" data-alt="A professional close-up portrait of a young man with a friendly expression, set against a soft-focus urban background. The lighting is natural and bright, matching a light-mode aesthetic. The image conveys a sense of modern professionalism and digital connectivity with a high-end, clean finish." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUCPKve55TEgTfItKmBCP5wC-8faI8OJ62psg6aZqliNcfUC-hfJ-DAkTnBa-RZZ8VYGf4ZcrS-Mru6QJKOP1J55imx8Zh1WqfBC2AlWc7E4vCF4OLC0PXzhHk3HpjOetR634O_Wq0_TnStEf0o33t4y0ZOepBJxfLMMPwdHm2-0yU-JRuZhNiFXFSilHcV4TI2I7jBr5K1f5tdNJVDwjCw_XwwPn2aWwd7wamHG-JXJ9ywXiAJGQ1rBqXaDs-lUnwahnX-ryfyMGx"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-secondary rounded-full border-2 border-surface-bright"></span>
+</div>
+<div class="flex flex-col">
+<h1 class="font-title-lg text-title-lg text-on-surface leading-tight">Ivan Efimov</h1>
+<p class="font-label-md text-label-md text-secondary">Online</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:opacity-80 transition-opacity active:scale-95 duration-200">videocam</button>
+<button class="material-symbols-outlined text-primary hover:opacity-80 transition-opacity active:scale-95 duration-200">call</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:opacity-80 transition-opacity active:scale-95 duration-200">more_vert</button>
+</div>
+</header>
+<!-- Main Chat Content -->
+<main class="chat-container mt-16 overflow-y-auto px-margin-mobile py-lg flex flex-col gap-md">
+<!-- Date Badge -->
+<div class="flex justify-center my-md">
+<span class="bg-surface-container-high px-3 py-1 rounded-full text-label-md font-label-md text-on-surface-variant">Today</span>
+</div>
+<!-- Incoming Message -->
+<div class="flex flex-col items-start max-w-[85%]">
+<div class="bg-surface-container-lowest text-on-surface p-md rounded-xl bubble-incoming">
+<p class="font-body-md text-body-md">Hey! Did you check out the new redesign project I just posted on Behance? It's all about streamlining the messenger experience.</p>
+<div class="text-right mt-1">
+<span class="text-[10px] text-on-surface-variant opacity-60">10:42 AM</span>
+</div>
+</div>
+</div>
+<!-- Incoming Media -->
+<div class="flex flex-col items-start max-w-[85%]">
+<div class="bg-surface-container-lowest p-1 rounded-xl bubble-incoming overflow-hidden">
+<img alt="Project Preview" class="rounded-lg w-full max-h-64 object-cover" data-alt="A clean, minimalist UI design mockup of a mobile application interface displayed on a high-resolution smartphone screen. The design features soft gradients, elegant typography, and a spacious layout consistent with modern tech aesthetics. The lighting is soft and even, highlighting the sleek curves of the device and the premium digital product design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzKzIsF1PQ9Xm5E7MbUawaJiq3d0N5iaAvSVXXftxt5eE20IwNizW6z9b5so9-jhXjquL2IylVthw1UnQZjCYnUiBzd-uzV0wzqjtIx2yvq6UmwKr4iA0GQyyyy2RL51fOgB4IrZ9glmhyRtMhQBBUT7nNH6oAt0tMHv0oWbtvtYI_RfXuOfRhRzAfTiXeNd0CSy8fw1bb46aUOZEf40_A1vTcWv2Z9eaIAdR4txs6YsEJoTeoE44Qvt7K9oU7fCXe56ouVbuFnW7C"/>
+<div class="p-2">
+<p class="font-body-md text-body-md">Here is a sneak peek of the dark mode transition! 🌙</p>
+<div class="text-right mt-1">
+<span class="text-[10px] text-on-surface-variant opacity-60">10:43 AM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Outgoing Message -->
+<div class="flex flex-col items-end self-end max-w-[85%]">
+<div class="bg-primary-container text-on-primary-container p-md rounded-xl bubble-outgoing">
+<p class="font-body-md text-body-md">Wow, the glassmorphism effects look incredibly smooth. I love how you handled the depth with those backdrop blurs! 🔥</p>
+<div class="flex items-center justify-end gap-1 mt-1">
+<span class="text-[10px] opacity-80">10:45 AM</span>
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+</div>
+</div>
+<!-- Outgoing GIF/Image -->
+<div class="flex flex-col items-end self-end max-w-[85%]">
+<div class="bg-primary-container p-1 rounded-xl bubble-outgoing overflow-hidden">
+<div class="relative">
+<img alt="Tech Appreciation" class="rounded-lg w-full h-40 object-cover" data-alt="A futuristic and abstract digital visualization of flowing data streams and glowing technological nodes. The colors are dominated by vibrant blues and soft purples, creating a sense of high-speed connectivity and advanced computing. The image has a clean, glossy finish with high-key lighting that fits a sophisticated, modern tech-driven design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAW20bcJYTX4CsobykZtaZoUvMpAQ_YiopZoS1-0Juh_IT-96Z0JLlIj8lSCqEYGGSjoQxMfUqa0-2GYyVfuqe4tvn3mKw_YXqN1A0Dtp4Ohb6pvWMTkcxEvuUXPXiHwvvWlLDmE8QTRFNgiVi8YCwdKs7a5KdQs-okcyzzMfZ_5bSR6lBdV7tO7yFAkSCj4bdeuYnKmaoQErsWyV6uHkeTSoLlYY2kkkoVJacFhFOwag8rIWRWpR0ydg9sJ1l1frnAlil7aT4Nf3VY"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="bg-black/20 backdrop-blur-sm px-2 py-1 rounded text-white text-[10px] font-bold">GIF</span>
+</div>
+</div>
+<div class="flex items-center justify-end gap-1 p-2">
+<span class="text-[10px] opacity-80 text-on-primary-container">10:46 AM</span>
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">done_all</span>
+</div>
+</div>
+</div>
+<!-- Incoming Status Typing -->
+<div class="flex items-center gap-2 text-on-surface-variant opacity-70 px-sm">
+<div class="flex gap-1">
+<span class="w-1.5 h-1.5 bg-on-surface-variant rounded-full animate-bounce"></span>
+<span class="w-1.5 h-1.5 bg-on-surface-variant rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+<span class="w-1.5 h-1.5 bg-on-surface-variant rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+</div>
+<span class="text-label-md font-label-md">Ivan is typing...</span>
+</div>
+</main>
+<!-- Bottom Input Area -->
+<footer class="fixed bottom-0 left-0 w-full z-50 px-margin-mobile py-4 bg-surface-bright/90 backdrop-blur-xl">
+<div class="max-w-4xl mx-auto flex items-end gap-3">
+<!-- Attachment Button -->
+<button class="w-12 h-12 flex items-center justify-center text-primary hover:bg-surface-container-high rounded-full transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[28px]">add</span>
+</button>
+<!-- Message Field -->
+<div class="flex-1 bg-surface-container flex items-end rounded-[24px] px-4 py-2 gap-2 min-h-[48px] border border-transparent focus-within:border-primary/20 transition-all duration-300">
+<button class="p-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">sentiment_satisfied</span>
+</button>
+<textarea class="flex-1 bg-transparent border-none focus:ring-0 text-body-md py-1.5 resize-none placeholder:text-on-surface-variant/50 max-h-32" placeholder="Message" rows="1"></textarea>
+<button class="p-1 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">gif_box</span>
+</button>
+</div>
+<!-- Send/Voice Button -->
+<button class="w-12 h-12 bg-primary flex items-center justify-center text-on-primary rounded-full shadow-lg hover:opacity-90 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined text-[24px]">send</span>
+</button>
+</div>
+</footer>
+<!-- Floating Navigation Suppression (As per mandate: Task-focused page) -->
+</body></html>

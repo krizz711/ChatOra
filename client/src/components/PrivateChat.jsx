@@ -5,7 +5,7 @@ import { downloadChatTxt, downloadFile } from '../utils/download';
 import { format } from 'date-fns';
 import styles from './PrivateChat.module.css';
 
-export default function PrivateChat({ targetUser, messages, onSend, onSendFile, onClose }) {
+export default function PrivateChat({ targetUser, messages, onSend, onSendFile, onClose, onStarUser, starringUserId, onViewProfile }) {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -49,8 +49,20 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
               : targetUser.username?.slice(0,2).toUpperCase()}
           </div>
           <span>{targetUser.username}</span>
+          <button
+            className={`${styles.starBtn} ${targetUser.starredByMe ? styles.starred : ''}`}
+            type="button"
+            onClick={() => onStarUser?.(targetUser.id)}
+            disabled={starringUserId === targetUser.id || targetUser.id?.startsWith('guest_')}
+            title={targetUser.starredByMe ? 'Unstar this chatter' : 'Star this chatter'}
+          >
+            {targetUser.starredByMe ? '★' : '☆'} {targetUser.stars || 0}
+          </button>
         </div>
         <div style={{display:'flex',gap:4}}>
+          <button className={styles.iconBtn} onClick={() => onViewProfile?.(targetUser)} title="View profile">
+            👤
+          </button>
           <button className={styles.iconBtn} onClick={() => downloadChatTxt(messages, `DM_${targetUser.username}`)} title="Download">
             ↓
           </button>

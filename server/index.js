@@ -6,13 +6,22 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { socketAuth } = require('./middleware/authMiddleware');
 const socketHandler = require('./socket/socketHandler');
+const passport = require('./config/passport');
 
 const app = express();
 const httpServer = createServer(app);
+const allowedOrigin = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+const normalizeOrigin = (value) => (value || '').replace(/\/$/, '');
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin || normalizeOrigin(origin) === allowedOrigin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -22,10 +31,17 @@ const io = new Server(httpServer, {
 
 // ── Middleware ──────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || normalizeOrigin(origin) === allowedOrigin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));
+app.use(passport.initialize());
 
 // Rate limiting
 const limiter = rateLimit({

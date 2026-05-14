@@ -1,4 +1,6 @@
 const redis = require('../redis/redisClient');
+const supabase = require('../db/supabase');
+const { v4: uuidv4 } = require('uuid');
 
 // Simple profanity filter - add words as needed
 const BAD_WORDS = ['spam', 'scam']; // extend as needed
@@ -15,6 +17,40 @@ const sanitize = (str) => {
   if (typeof str !== 'string') return '';
   return str.replace(/<[^>]*>/g, '').trim().slice(0, 2000);
 };
+
+const buildSender = (user) => ({
+  id: user.id,
+  username: user.username,
+  avatar_url: user.avatar_url,
+  country: user.country || null,
+  state: user.state || null,
+  gender: user.gender || 'other',
+  age: user.age || null,
+  star_count: user.star_count || 0,
+});
+
+const mapStoredMessage = (row) => ({
+  id: row.id,
+  roomId: row.room_id,
+  text: row.text || '',
+  fileUrl: row.file_url || null,
+  fileName: row.file_name || null,
+  fileType: row.file_type || null,
+  fileSize: row.file_size || null,
+  sender: row.sender ? {
+    id: row.sender.id,
+    username: row.sender.username,
+    avatar_url: row.sender.avatar_url,
+    country: row.sender.country || null,
+    state: row.sender.state || null,
+    gender: row.sender.gender || 'other',
+    age: row.sender.age || null,
+    star_count: row.sender.star_count || 0,
+  } : null,
+  replyTo: row.reply_to || null,
+  timestamp: row.created_at,
+  type: row.file_url ? 'file' : 'text',
+});
 
 const safeParseUser = (raw) => {
   if (!raw) return null;
@@ -40,6 +76,11 @@ module.exports = (io) => {
       id: user.id,
       username: user.username,
       avatar_url: user.avatar_url,
+      country: user.country || null,
+      state: user.state || null,
+      gender: user.gender || 'other',
+      age: user.age || null,
+      star_count: user.star_count || 0,
       socketId: socket.id,
     }));
 
@@ -49,6 +90,37 @@ module.exports = (io) => {
     socket.on('room:join', async ({ roomId }) => {
       if (!roomId) return;
       socket.join(roomId);
+
+      const { data: history, error } = await supabase
+        .from('messages')
+        .select(`
+          id,
+          room_id,
+          text,
+          file_url,
+          file_name,
+          file_type,
+          file_size,
+          reply_to,
+          created_at,
+          sender:users (
+            id,
+            username,
+            avatar_url,
+            country,
+            state,
+            gender,
+            age,
+            star_count
+          )
+        `)
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (!error && Array.isArray(history)) {
+        socket.emit('message:history', { roomId, messages: history.reverse().map(mapStoredMessage) });
+      }
 
       // Count members in room
       const roomSockets = await io.in(roomId).allSockets();
@@ -65,50 +137,80 @@ module.exports = (io) => {
     });
 
     // ─── SEND MESSAGE TO ROOM ────────────────────────────────────
-    socket.on('message:send', ({ roomId, text, replyTo }) => {
+    socket.on('message:send', async ({ roomId, text, replyTo }) => {
       if (!roomId || !text) return;
 
       const clean = filterMessage(sanitize(text));
       if (!clean) return;
 
       const message = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: uuidv4(),
         roomId,
         text: clean,
-        sender: {
-          id: user.id,
-          username: user.username,
-          avatar_url: user.avatar_url,
-        },
+        sender: buildSender(user),
         replyTo: replyTo || null,
         timestamp: new Date().toISOString(),
         type: 'text',
       };
+
+      const { error: insertError } = await supabase.from('messages').insert({
+        id: message.id,
+        room_id: roomId,
+        sender_id: user.id,
+        text: clean,
+        reply_to: replyTo || null,
+      });
+
+      if (insertError) {
+        console.error('Failed to store message', insertError);
+        socket.emit('message:error', { error: 'Failed to store message' });
+        return;
+      }
 
       // Broadcast to everyone in room including sender
       io.to(roomId).emit('message:receive', message);
     });
 
     // ─── SEND FILE/IMAGE IN ROOM ─────────────────────────────────
-    socket.on('message:file', ({ roomId, fileUrl, fileName, fileType, fileSize }) => {
+    socket.on('message:file', async ({ roomId, fileUrl, fileName, fileType, fileSize }) => {
       if (!roomId || !fileUrl) return;
 
+      const { data: group } = await supabase.from('groups').select('is_global').eq('id', roomId).single();
+      if (group?.is_global) {
+        if ((fileType?.startsWith('image/') && fileType !== 'image/gif') || fileType?.startsWith('video/')) {
+          socket.emit('message:error', { error: 'Images and videos are not allowed in global rooms. Only GIFs are permitted.' });
+          return;
+        }
+      }
+
       const message = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: uuidv4(),
         roomId,
         text: '',
         fileUrl,
         fileName: sanitize(fileName),
         fileType,
         fileSize,
-        sender: {
-          id: user.id,
-          username: user.username,
-          avatar_url: user.avatar_url,
-        },
+        sender: buildSender(user),
         timestamp: new Date().toISOString(),
         type: 'file',
       };
+
+      const { error: insertError } = await supabase.from('messages').insert({
+        id: message.id,
+        room_id: roomId,
+        sender_id: user.id,
+        file_url: fileUrl,
+        file_name: sanitize(fileName),
+        file_type: fileType,
+        file_size: fileSize || null,
+      });
+
+      if (insertError) {
+        console.error('Failed to store file message', insertError);
+        socket.emit('message:error', { error: 'Failed to store file message' });
+        return;
+      }
 
       io.to(roomId).emit('message:receive', message);
     });
@@ -160,9 +262,14 @@ module.exports = (io) => {
         await redis.hdel('online_users', toUserId);
         return socket.emit('private:error', { error: 'User is offline' });
       }
+      const recipientSocket = io.sockets.sockets.get(recipient.socketId);
+      if (!recipientSocket) {
+        await redis.hdel('online_users', toUserId);
+        return socket.emit('private:error', { error: 'User is offline' });
+      }
 
       const message = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: uuidv4(),
         text: text ? filterMessage(sanitize(text)) : '',
         fileUrl: fileUrl || null,
         fileName: fileName ? sanitize(fileName) : null,
@@ -171,13 +278,14 @@ module.exports = (io) => {
           id: user.id,
           username: user.username,
           avatar_url: user.avatar_url,
+          gender: user.gender || 'other',
         },
         timestamp: new Date().toISOString(),
         type: fileUrl ? 'file' : 'text',
       };
 
       // Send to recipient
-      io.to(recipient.socketId).emit('private:receive', message);
+      recipientSocket.emit('private:receive', message);
       // Echo to sender
       socket.emit('private:receive', { ...message, toUserId });
     });

@@ -71,17 +71,16 @@ router.post('/create', authMiddleware, async (req, res) => {
   }
 });
 
-// Join a public group
-router.post('/join/:groupId', authMiddleware, async (req, res) => {
+// Join private group by invite code
+router.post('/join/invite/:code', authMiddleware, async (req, res) => {
   try {
     const { data: group } = await supabase
       .from('groups')
       .select('*')
-      .eq('id', req.params.groupId)
-      .eq('is_private', false)
+      .eq('invite_code', req.params.code.toUpperCase())
       .single();
 
-    if (!group) return res.status(404).json({ error: 'Group not found' });
+    if (!group) return res.status(404).json({ error: 'Invalid invite code' });
 
     await supabase.from('group_members').upsert({
       group_id: group.id,
@@ -94,16 +93,17 @@ router.post('/join/:groupId', authMiddleware, async (req, res) => {
   }
 });
 
-// Join private group by invite code
-router.post('/join/invite/:code', authMiddleware, async (req, res) => {
+// Join a public group
+router.post('/join/:groupId', authMiddleware, async (req, res) => {
   try {
     const { data: group } = await supabase
       .from('groups')
       .select('*')
-      .eq('invite_code', req.params.code.toUpperCase())
+      .eq('id', req.params.groupId)
+      .eq('is_private', false)
       .single();
 
-    if (!group) return res.status(404).json({ error: 'Invalid invite code' });
+    if (!group) return res.status(404).json({ error: 'Group not found' });
 
     await supabase.from('group_members').upsert({
       group_id: group.id,

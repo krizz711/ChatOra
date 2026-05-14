@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messenger - People</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#faf9fe",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed-variant": "#00531c",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#ffdcbf",
+                    "secondary-container": "#6ffb85",
+                    "on-primary-fixed-variant": "#004b73",
+                    "on-primary-fixed": "#001d31",
+                    "inverse-surface": "#2f3034",
+                    "inverse-on-surface": "#f1f0f5",
+                    "tertiary-fixed-dim": "#ffb874",
+                    "on-tertiary-fixed-variant": "#6a3b00",
+                    "on-error": "#ffffff",
+                    "surface-container-highest": "#e3e2e7",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#92ccff",
+                    "tertiary-container": "#ac6300",
+                    "outline-variant": "#bfc7d2",
+                    "surface-dim": "#dad9df",
+                    "on-primary-container": "#fdfcff",
+                    "primary-fixed": "#cce5ff",
+                    "surface-variant": "#e3e2e7",
+                    "background": "#faf9fe",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed": "#002107",
+                    "primary": "#006193",
+                    "tertiary": "#894d00",
+                    "inverse-primary": "#92ccff",
+                    "secondary-fixed-dim": "#53e16f",
+                    "surface-container-high": "#e9e7ed",
+                    "on-background": "#1a1b1f",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#007bb9",
+                    "on-tertiary-container": "#fffbff",
+                    "surface-tint": "#006497",
+                    "secondary-fixed": "#72fe88",
+                    "surface-container": "#eeedf3",
+                    "on-secondary-container": "#00732a",
+                    "on-tertiary": "#ffffff",
+                    "secondary": "#006e28",
+                    "error": "#ba1a1a",
+                    "outline": "#6f7881",
+                    "surface-container-low": "#f4f3f8",
+                    "surface": "#faf9fe",
+                    "on-surface-variant": "#3f4850",
+                    "on-tertiary-fixed": "#2d1600",
+                    "on-surface": "#1a1b1f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "20px",
+                    "margin-desktop": "40px",
+                    "unit": "4px",
+                    "xs": "4px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "gutter": "16px",
+                    "sm": "8px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .chat-bubble-shadow {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-bright text-on-surface font-body-md antialiased min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile h-16 bg-surface-bright/80 dark:bg-on-background/80 backdrop-blur-xl shadow-sm">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-primary-fixed border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHV4kNq7nZIq6FWgpdI7Ar3zam2UgOLBr0UI6xescYo32JFVnxTg10ceKa-OmaqNDexyRXhQb4VP6dEdA441G7sD0RctvrTww4YSwVYocBShrOud6SayjHz2xKMDz6g-vHVjiHzYmb7lyusFfYW64yW3uWhuH4bPDx5safVvAOeI1-iYr1VwvBpBx4WzDzg6WYw0GBFRcSbpUhGLgJJhwRgvGZnnOftD5cFQDln6mSmOAkzqcsg1TTobmC3nnBWQPkJ7r6RVWSiDJa"/>
+</div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Messenger</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:opacity-80 transition-opacity active:scale-95 duration-200">
+<span class="material-symbols-outlined text-primary" data-icon="search">search</span>
+</button>
+</header>
+<main class="pt-20 px-margin-mobile">
+<!-- Filter Toggle -->
+<div class="flex justify-center my-6">
+<div class="bg-surface-container-low p-1 rounded-full flex gap-1 w-full max-w-sm shadow-sm">
+<button class="flex-1 py-2 px-6 rounded-full font-title-lg text-body-md transition-all duration-200 bg-primary-container text-on-primary-container shadow-sm">
+                    Nearby
+                </button>
+<button class="flex-1 py-2 px-6 rounded-full font-title-lg text-body-md transition-all duration-200 text-on-surface-variant hover:bg-surface-container-high">
+                    Popular
+                </button>
+</div>
+</div>
+<!-- Section Title -->
+<div class="mb-4 flex items-center justify-between">
+<h2 class="font-title-lg text-title-lg text-on-surface">People Nearby</h2>
+<span class="text-body-md text-on-surface-variant">248 active</span>
+</div>
+<!-- User List (Vertical Asymmetric Cards) -->
+<div class="space-y-4 max-w-2xl mx-auto">
+<!-- User Card 1 -->
+<div class="bg-surface-container-lowest p-md rounded-xl flex items-center gap-md chat-bubble-shadow hover:bg-surface-container transition-colors group cursor-pointer border border-transparent hover:border-outline-variant">
+<div class="relative">
+<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-primary-fixed">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a woman with a bright, welcoming smile. The background is a soft, out-of-focus pastel blue, matching a modern light-mode chat application aesthetic. The lighting is balanced and airy, emphasizing high-end UI clarity and professional networking vibes." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZUFHgvhDmzVEPRyQQ1JTpMm0ysXuTKcviYn0iyDkPXgUpo-5YDTGT8gxp8aZP-DG-HXwc0uhpb9DyZeAvU1OdiyY_XfTOGP9BGNot6PyHekTn2dNVDKu6JQpb4pmts66D9gO_j8-TXoLuFCIsduvha_2ztXJowETdqBvq_zn4PCTHngihjijS5f32U3zar5VM_XMhjkUypfhHbjIICM0Z3IOPBYD6hXE8hXkwx7x-zim14SQoGY0Qj4ll5QvwL4H4_DC9dh7fjBAj"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-secondary-fixed-dim rounded-full border-2 border-surface-container-lowest"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-title-lg text-body-lg text-on-surface">Elena Rodriguez</h3>
+<span class="text-label-md font-label-md text-primary bg-primary-fixed/30 px-2 py-0.5 rounded-full">0.8 km</span>
+</div>
+<p class="text-body-md text-on-surface-variant line-clamp-1">UI Designer &amp; Typography Enthusiast</p>
+<p class="text-label-md text-secondary mt-1 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Online
+                    </p>
+</div>
+</div>
+<!-- User Card 2 -->
+<div class="bg-surface-container-lowest p-md rounded-xl flex items-center gap-md chat-bubble-shadow hover:bg-surface-container transition-colors group cursor-pointer border border-transparent hover:border-outline-variant">
+<div class="relative">
+<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A cinematic outdoor portrait of a young man with a slight beard, looking thoughtfully into the distance. The lighting is warm golden hour sunlight, creating long soft shadows. The overall mood is sophisticated and authentic, fitting for a high-quality social messaging interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCB8TIzeGTYsi36cUd4f3A11yD48jgxU-MdPF4nm3jbdQDLLm82UdJAv9ZE3WYh36zQKXRAS1fJUL1Tf8VekIE0wyn0LzJSbbNf2fyQupCmJn9KiN734MF39uX0MZdx-GYFKCcajlV8yBV6VeaT5q8R6SLn9Q6LPLB3kQU19YElvfprf1jQMas01fzkjUKMMgNZ_AUzkMsnvmdaawq7vHZVF0y0zW4rsw32buxNjjVy1BSw0kZCqQ_D7ZjNjwXNLEFGXpgZ74H_3lEx"/>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-title-lg text-body-lg text-on-surface">Marcus Chen</h3>
+<span class="text-label-md font-label-md text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">1.2 km</span>
+</div>
+<p class="text-body-md text-on-surface-variant line-clamp-1">Full-stack Dev | Exploring the city 🍕</p>
+<p class="text-label-md text-on-surface-variant mt-1">Last seen 5 min ago</p>
+</div>
+</div>
+<!-- User Card 3 -->
+<div class="bg-surface-container-lowest p-md rounded-xl flex items-center gap-md chat-bubble-shadow hover:bg-surface-container transition-colors group cursor-pointer border border-transparent hover:border-outline-variant">
+<div class="relative">
+<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-primary-fixed">
+<img class="w-full h-full object-cover" data-alt="Close-up portrait of a creative individual with glasses, smiling softly. The setting is a minimalist interior with clean lines and natural light. The color palette consists of neutral tones and soft highlights, reinforcing a premium, airy, and focused communication tool atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk58GV6QaPbK5_N80BAf86Mu1BXCH2cam1YXYCodEha7qkSLOkmKC6eQWlRP7iSOImLZHT8fm1y5CWT0hR6xzXlf5df8XM-cHJEKZzQr0Ob0wOFUuhsYeggCxAarMABXclnrKA626Moueaseu3OV250I8w2ZXg0bfik0SqvJq5c_8zm1--fNAqHRU5rRbbWKwcom0mffcdd93c7NGbsiEDbGmBlj_seQPi50QqRpwgW0UI7DbpJFGNmzXG4SBoNYFSIN9V0H8FuQ6h"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-secondary-fixed-dim rounded-full border-2 border-surface-container-lowest"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-title-lg text-body-lg text-on-surface">Sophie Laurent</h3>
+<span class="text-label-md font-label-md text-primary bg-primary-fixed/30 px-2 py-0.5 rounded-full">2.5 km</span>
+</div>
+<p class="text-body-md text-on-surface-variant line-clamp-1">Product Strategist • Coffee Lover</p>
+<p class="text-label-md text-secondary mt-1 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Online
+                    </p>
+</div>
+</div>
+<!-- User Card 4 -->
+<div class="bg-surface-container-lowest p-md rounded-xl flex items-center gap-md chat-bubble-shadow hover:bg-surface-container transition-colors group cursor-pointer border border-transparent hover:border-outline-variant">
+<div class="relative">
+<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A stylish portrait of a man in casual attire, leaning against a clean white wall. The shadows are soft and diffused, creating a sense of depth and weightlessness. The visual style is modern minimalism, with a focus on high-fidelity textures and professional aesthetic appeal." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQC6oP9qkk9MWCZz5VVlIuYa29Z7eDZJbqqy5lvplGMVZ_rMEV6JIJwoNjXVxpFVdbixij1kpzgTrebWf_Vy3H-3rn1eLnPJH_8ZSIIe2cj8xEpGSvNcXAKfs5Lvl4m1z9e-KBUzXCBBj4vkdDVxCDgY-w3OQ17rmHh35_OYnfjb02GHMKFQBTG_gy5brWEvj3nXQRisFm2Vzs3xZH16YFBL__eUTx1kbDCfQ1sgczRU5Ajd17x2rdX8p8s4SpR3D5XjwRFUQ6OShY"/>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-title-lg text-body-lg text-on-surface">Alex Thompson</h3>
+<span class="text-label-md font-label-md text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-full">4.1 km</span>
+</div>
+<p class="text-body-md text-on-surface-variant line-clamp-1">Photographer &amp; Digital Nomad</p>
+<p class="text-label-md text-on-surface-variant mt-1">Last seen yesterday</p>
+</div>
+</div>
+<!-- User Card 5 -->
+<div class="bg-surface-container-lowest p-md rounded-xl flex items-center gap-md chat-bubble-shadow hover:bg-surface-container transition-colors group cursor-pointer border border-transparent hover:border-outline-variant">
+<div class="relative">
+<div class="w-16 h-16 rounded-full overflow-hidden border-2 border-primary-fixed">
+<img class="w-full h-full object-cover" data-alt="A portrait of a young woman with a vibrant personality, wearing a minimalist outfit. The background is a clean studio white, providing maximum contrast for her friendly expression. The lighting is bright and even, perfectly complementing a premium, light-themed app interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPjnnRFB-skPRpvsPmZRr9uN_L1kxTPu8mGdHfGd2X6qfAJR0cXxQ0UNL5dLbD-eVCHdUSuMTps-tJ8lkSZrIdbtPPUY5931mBuEEstig2IqM4fyrHsXW3yUEQ1fWKivRuFqCGLh1_Et6j4OI3xQsl7NKPoSJLOLv-iMNl6neXPRkqaR_X4K6SXVTWUXzayCKhmEQumQ87pd2_X8WaML4MIr8268sh_W78kNrwFQh9YxAdYNfMYQWBo75-W8idUMb6kPIH8iU3Ebbp"/>
+</div>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-secondary-fixed-dim rounded-full border-2 border-surface-container-lowest"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-title-lg text-body-lg text-on-surface">Jasmine Kim</h3>
+<span class="text-label-md font-label-md text-primary bg-primary-fixed/30 px-2 py-0.5 rounded-full">5.3 km</span>
+</div>
+<p class="text-body-md text-on-surface-variant line-clamp-1">Motion Designer at TechFlow</p>
+<p class="text-label-md text-secondary mt-1 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Online
+                    </p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-margin-mobile py-2 bg-surface-bright/80 dark:bg-on-background/80 backdrop-blur-xl shadow-sm">
+<a class="flex flex-col items-center justify-center text-primary bg-primary-container/20 rounded-xl px-4 py-1 transition-transform duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="group" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-label-md text-label-md">People</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-container rounded-xl transition-transform duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+<span class="font-label-md text-label-md">Rooms</span>
+</a>
+</nav>
+<!-- FAB (Contextual for People screen: Find New) -->
+<button class="fixed right-6 bottom-24 w-14 h-14 rounded-2xl bg-primary shadow-xl flex items-center justify-center text-on-primary hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[28px]" data-icon="person_add">person_add</span>
+</button>
+</body></html>
