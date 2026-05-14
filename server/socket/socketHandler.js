@@ -72,7 +72,9 @@ module.exports = (io) => {
     console.log(`✅ Connected: ${user.username} (${socket.id})`);
 
     // Set user online in Redis
+    const existingOnlineUser = safeParseUser(await redis.hget('online_users', user.id)) || {};
     await redis.hset('online_users', user.id, JSON.stringify({
+      ...existingOnlineUser,
       id: user.id,
       username: user.username,
       avatar_url: user.avatar_url,
@@ -259,12 +261,22 @@ module.exports = (io) => {
       }
       const recipient = safeParseUser(recipientRaw);
       if (!recipient || !recipient.socketId) {
-        await redis.hdel('online_users', toUserId);
+        if (recipientRaw && recipient?.id) {
+          const currentRaw = await redis.hget('online_users', recipient.id);
+          const current = safeParseUser(currentRaw);
+          if (current?.socketId === recipient.socketId) {
+            await redis.hdel('online_users', recipient.id);
+          }
+        }
         return socket.emit('private:error', { error: 'User is offline' });
       }
       const recipientSocket = io.sockets.sockets.get(recipient.socketId);
       if (!recipientSocket) {
-        await redis.hdel('online_users', toUserId);
+        const currentRaw = await redis.hget('online_users', toUserId);
+        const current = safeParseUser(currentRaw);
+        if (current?.socketId === recipient.socketId) {
+          await redis.hdel('online_users', toUserId);
+        }
         return socket.emit('private:error', { error: 'User is offline' });
       }
 
@@ -318,12 +330,17 @@ module.exports = (io) => {
     // ─── DISCONNECT ──────────────────────────────────────────────
     socket.on('disconnect', async () => {
       console.log(`❌ Disconnected: ${user.username}`);
-      await redis.hdel('online_users', user.id);
+      const currentRaw = await redis.hget('online_users', user.id);
+      const current = safeParseUser(currentRaw);
+      if (current?.socketId === socket.id) {
+        await redis.hdel('online_users', user.id);
+      }
       io.emit('user:offline', { userId: user.id });
 
       // Cleanup typing
       typingTimeouts.forEach((timeout, key) => {
-        if (key.startsWith(user.id)) {
+        const [userKey] = key.split(':');
+        if (userKey === user.id) {
           clearTimeout(timeout);
           typingTimeouts.delete(key);
         }

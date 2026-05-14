@@ -222,7 +222,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                         e.stopPropagation();
                         onUserStar?.(u.id);
                       }}
-                      disabled={starringUserId === u.id || u.id?.startsWith('guest_') || u.id === user?.id || u.starredByMe}
+                      disabled={starringUserId === u.id || u.id?.startsWith('guest_') || u.id === user?.id}
                       title={u.starredByMe ? 'Already starred' : 'Star this chatter'}
                     >
                       {u.starredByMe ? '★' : '☆'} {u.stars || 0}

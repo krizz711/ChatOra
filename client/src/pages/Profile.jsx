@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile, uploadAvatar } from '../utils/api';
+import axios from 'axios';
 import styles from './Profile.module.css';
 
 export default function Profile() {
@@ -43,8 +44,11 @@ export default function Profile() {
     const userId = searchParams.get('user');
     if (userId) {
       setLoading(true);
-      fetch(`${SERVER}/api/auth/users/${userId}`)
-        .then(r => r.json())
+      const token = localStorage.getItem('token');
+      axios.get(`${SERVER}/api/auth/users/${userId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then(r => r.data)
         .then(data => {
           if (data.success) setViewingUser(data.user);
           else setViewingUser(null);

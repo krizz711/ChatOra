@@ -17,10 +17,7 @@ async function seed() {
 
         if (!data) {
             console.log(`Creating global room: ${room.name}`);
-            await supabase.from('groups').insert({
-                ...room,
-                owner_id: '00000000-0000-0000-0000-000000000000' // dummy owner for global room if needed, or null if schema allows. Actually, let's just not send owner_id if it works without it, or let's use a dummy. Wait, supabase allows null? Let's assume it allows null since it's a global room.
-            });
+            await supabase.from('groups').insert(room);
         } else {
             console.log(`Global room ${room.name} already exists.`);
         }

@@ -30,6 +30,7 @@ router.get('/google',
 router.get('/google/callback',
   (req, res, next) => {
     passport.authenticate('google', { session: false }, (err, user, info) => {
+      const CLIENT = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
       if (err) {
         console.error('❌ Google OAuth Error Details:', {
           message: err.message,
@@ -39,17 +40,16 @@ router.get('/google/callback',
           fullError: JSON.stringify(err, null, 2),
         });
         const errorMsg = err.code || err.message || 'google_failed';
-        return res.redirect(`/login?error=${encodeURIComponent(errorMsg)}`);
+        return res.redirect(`${CLIENT}/login?error=${encodeURIComponent(errorMsg)}`);
       }
 
       if (!user) {
         console.error('❌ Google OAuth: No user returned', info);
-        return res.redirect(`/login?error=no_user&info=${encodeURIComponent(JSON.stringify(info))}`);
+        return res.redirect(`${CLIENT}/login?error=no_user&info=${encodeURIComponent(JSON.stringify(info))}`);
       }
 
       console.log('✅ Google OAuth Success:', { userId: user.user?.id, username: user.user?.username });
       const { user: userData, token } = user;
-      const CLIENT = process.env.CLIENT_URL || 'http://localhost:5173';
       res.redirect(`${CLIENT}/auth/callback?token=${token}&userId=${userData.id}`);
     })(req, res, next);
   }
@@ -259,16 +259,6 @@ router.post('/star/:userId', authMiddleware, async (req, res) => {
       .maybeSingle();
 
     if (existingErr) throw existingErr;
-    if (existing) {
-      return res.status(409).json({ error: 'You have already starred this user' });
-    }
-
-    const { error: insErr } = await supabase
-      .from('user_stars')
-      .insert({ starred_by: req.user.id, starred_user_id: userId });
-
-    if (insErr) throw insErr;
-
     const { data: targetUser, error: countErr } = await supabase
       .from('users')
       .select('star_count')
@@ -277,7 +267,38 @@ router.post('/star/:userId', authMiddleware, async (req, res) => {
 
     if (countErr) throw countErr;
 
-    res.json({ userId, starred: true, starCount: targetUser?.star_count || 0 });
+    const currentCount = targetUser?.star_count || 0;
+    let starred = false;
+    let nextCount = currentCount;
+
+    if (existing) {
+      const { error: deleteErr } = await supabase
+        .from('user_stars')
+        .delete()
+        .eq('starred_by', req.user.id)
+        .eq('starred_user_id', userId);
+
+      if (deleteErr) throw deleteErr;
+      starred = false;
+      nextCount = Math.max(0, currentCount - 1);
+    } else {
+      const { error: insErr } = await supabase
+        .from('user_stars')
+        .insert({ starred_by: req.user.id, starred_user_id: userId });
+
+      if (insErr) throw insErr;
+      starred = true;
+      nextCount = currentCount + 1;
+    }
+
+    const { error: updateErr } = await supabase
+      .from('users')
+      .update({ star_count: nextCount })
+      .eq('id', userId);
+
+    if (updateErr) throw updateErr;
+
+    res.json({ starred, starCount: nextCount });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

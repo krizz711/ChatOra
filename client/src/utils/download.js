@@ -81,6 +81,7 @@ export const downloadChatZip = async (messages, roomName) => {
     const zip = new JSZip();
     const safeName = roomName.replace(/[^a-z0-9]/gi, '_');
     const folder = zip.folder(safeName);
+    const failedFiles = [];
     const lines = (messages || []).map(msg => {
       const time = msg.timestamp ? format(new Date(msg.timestamp), 'HH:mm:ss') : '--:--:--';
       if (msg.type === 'file') return `[${time}] ${senderName(msg)}: [File: ${msg.fileName || 'unknown'}]`;
@@ -94,7 +95,12 @@ export const downloadChatZip = async (messages, roomName) => {
         const blob = await res.blob();
         if (blob.size === 0) continue;
         folder.file(msg.fileName || 'file', blob);
-      } catch {}
+      } catch {
+        failedFiles.push(msg.fileName || msg.fileUrl || 'unknown file');
+      }
+    }
+    if (failedFiles.length) {
+      folder.file('download_warnings.txt', `Some files could not be downloaded:\n${failedFiles.map(name => `- ${name}`).join('\n')}`);
     }
     const content = await zip.generateAsync({ type: 'blob' });
     saveAs(content, `${safeName}_export.zip`);

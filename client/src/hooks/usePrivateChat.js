@@ -3,7 +3,7 @@ import { getSocket } from '../socket';
 
 const MAX_MESSAGES = 200;
 
-export const usePrivateChat = () => {
+export const usePrivateChat = (currentUserId) => {
   const [conversations, setConversations] = useState({}); // { userId: [messages] }
   const [activeChat, setActiveChat] = useState(null);
 
@@ -12,7 +12,7 @@ export const usePrivateChat = () => {
     if (!socket) return;
 
     const onPrivateMessage = (msg) => {
-      const key = msg.toUserId ?? msg.sender.id;
+      const key = msg.sender.id === currentUserId ? msg.toUserId : msg.sender.id;
       setConversations(prev => {
         const existing = prev[key] || [];
         const updated = [...existing, msg].slice(-MAX_MESSAGES);
@@ -22,7 +22,7 @@ export const usePrivateChat = () => {
 
     socket.on('private:receive', onPrivateMessage);
     return () => socket.off('private:receive', onPrivateMessage);
-  }, []);
+  }, [currentUserId]);
 
   const sendPrivateMessage = useCallback((toUserId, text) => {
     const socket = getSocket();

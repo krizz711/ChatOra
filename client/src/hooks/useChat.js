@@ -63,7 +63,6 @@ export const useChat = (roomId) => {
       socket.off('message:error', onError);
       socket.off('typing:update', onTyping);
       socket.off('room:count', onCount);
-      setMessages([]); // clear on room leave
     };
   }, [roomId]);
 

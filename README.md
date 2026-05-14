@@ -1,7 +1,7 @@
 # NexChat — Real-Time Chat App
 
-A fast, efficient real-time chat application with zero message storage.
-Messages live only in your browser — when you leave, they're gone.
+A fast, efficient real-time chat application with stored room history and ephemeral private messages.
+Room messages are written to Supabase for history; direct messages stay out of the database.
 
 ---
 
@@ -15,7 +15,7 @@ Messages live only in your browser — when you leave, they're gone.
 - User profiles with avatars
 - Typing indicators
 - Online user presence
-- Zero message storage — privacy by design
+- Room history in Supabase; private DMs stay ephemeral
 
 ---
 
@@ -231,27 +231,26 @@ chat-app/
 - Message content filtering
 - File type and size restrictions (10MB max)
 - CORS locked to your domain
-- No chat messages ever written to database
+- Room chat messages are written to Supabase for history; DMs are not stored
 - Private groups accessible by invite code only
 
 ---
 
-## How Messages Work (No Storage)
+## How Messages Work
 
 ```
-User sends message
+User sends room message
       ↓
 Socket.io server receives it
       ↓
-Server broadcasts to all users in the room
+Server stores it in Supabase and broadcasts it to the room
       ↓
 Each browser stores it in React state (RAM)
       ↓
-User closes tab / logs out → message gone forever
-      ↓
-Nothing written to database. Ever.
+User closes tab / logs out → room history remains in Supabase
 ```
 
+Private DMs are still session-only and are not written to the database.
 Download option lets users save their own session locally before leaving.
 
 ---

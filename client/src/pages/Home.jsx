@@ -15,7 +15,7 @@ export default function Home() {
   const [activeRoom, setActiveRoom] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [starringUserId, setStarringUserId] = useState('');
-  const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat();
+  const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id);
   const [privateChatUser, setPrivateChatUser] = useState(null);
 
   const applyStarStats = async (users) => {
@@ -82,9 +82,7 @@ export default function Home() {
           : prev
       ));
     } catch (err) {
-      if (err.response?.status !== 409) {
-        // no-op: keep chat flow uninterrupted if starring fails
-      }
+      // no-op: keep chat flow uninterrupted if starring fails
     } finally {
       setStarringUserId('');
     }

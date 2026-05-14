@@ -13,6 +13,9 @@ const authMiddleware = async (req, res, next) => {
 
     // Guest path — no DB lookup
     if (decoded.isGuest) {
+      if (typeof decoded.userId !== 'string' || !decoded.userId.startsWith('guest_')) {
+        return res.status(401).json({ error: 'Invalid guest token' });
+      }
       req.user = {
         id: decoded.userId,
         username: decoded.username,
@@ -37,7 +40,12 @@ const authMiddleware = async (req, res, next) => {
       .single();
 
     if (error || !user) return res.status(401).json({ error: 'Invalid token' });
-    req.user = user;
+    const needsProfile = (!user.isGuest) && (
+      user.age === null || user.age === undefined ||
+      user.country === null || user.country === undefined ||
+      !user.gender || user.gender === 'other'
+    );
+    req.user = { ...user, needsProfile };
     next();
   } catch {
     return res.status(401).json({ error: 'Token expired or invalid' });
@@ -54,6 +62,9 @@ const socketAuth = async (socket, next) => {
 
     // Guest path
     if (decoded.isGuest) {
+      if (typeof decoded.userId !== 'string' || !decoded.userId.startsWith('guest_')) {
+        return next(new Error('Invalid guest token'));
+      }
       socket.user = {
         id: decoded.userId,
         username: decoded.username,
@@ -76,7 +87,8 @@ const socketAuth = async (socket, next) => {
       .single();
 
     if (error || !user) return next(new Error('Invalid token'));
-    socket.user = user;
+    const needsProfile = (user.age === null || user.age === undefined || user.country === null || user.country === undefined || !user.gender || user.gender === 'other');
+    socket.user = { ...user, needsProfile };
     next();
   } catch {
     next(new Error('Token expired'));

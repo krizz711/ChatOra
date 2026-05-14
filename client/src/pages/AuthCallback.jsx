@@ -24,7 +24,13 @@ export default function AuthCallback() {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const res = await axios.get(`${SERVER}/api/auth/me`);
         loginWithToken(res.data.user, token);
-        navigate('/');
+        const u = res.data.user || {};
+        const needsProfile = (u.age === null || u.age === undefined || u.country === null || u.country === undefined || !u.gender || u.gender === 'other') && !u.isGuest;
+        if (needsProfile) {
+          navigate('/profile?setup=1');
+        } else {
+          navigate('/');
+        }
       } catch {
         localStorage.removeItem('token');
         navigate('/login?error=auth_failed');

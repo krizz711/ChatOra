@@ -35,7 +35,7 @@ router.get('/fetch', async (req, res) => {
     }
 
     const host = target.hostname;
-    const isCloudinary = host.includes('cloudinary.com');
+    const isCloudinary = host === 'res.cloudinary.com' || host.endsWith('.cloudinary.com');
     if (target.protocol !== 'https:' || !isCloudinary) {
       return res.status(403).json({ error: 'Only Cloudinary URLs allowed' });
     }
