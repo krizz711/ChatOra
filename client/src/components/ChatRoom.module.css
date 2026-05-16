@@ -200,76 +200,40 @@
 
 /* Directional Glow — Sent (Mine) */
 .bubbleMine.glowMale {
-  box-shadow: -6px 10px 24px rgba(99, 155, 255, 0.3), -12px 18px 40px rgba(99, 155, 255, 0.08);
-}
-
-.bubbleMine.glowFemale {
-  box-shadow: -6px 10px 24px rgba(255, 120, 180, 0.3), -12px 18px 40px rgba(255, 120, 180, 0.08);
-}
-
-.bubbleMine.glowNeutral {
-  box-shadow: -6px 10px 24px rgba(168, 162, 158, 0.3), -12px 18px 40px rgba(168, 162, 158, 0.08);
-}
-
-/* Directional Glow — Received (Other) */
-.bubbleOther.glowMale {
-  box-shadow: 6px 10px 24px rgba(99, 155, 255, 0.3), 12px 18px 40px rgba(99, 155, 255, 0.08);
-}
-
-.bubbleOther.glowFemale {
-  box-shadow: 6px 10px 24px rgba(255, 120, 180, 0.3), 12px 18px 40px rgba(255, 120, 180, 0.08);
-}
-
-.bubbleOther.glowNeutral {
-  box-shadow: 6px 10px 24px rgba(168, 162, 158, 0.3), 12px 18px 40px rgba(168, 162, 158, 0.08);
-}
-
-/* Dark mode amplified glow */
-html.dark-mode .bubbleMine.glowMale {
   box-shadow: -6px 10px 30px rgba(99, 155, 255, 0.4), -14px 20px 45px rgba(99, 155, 255, 0.12);
 }
 
-html.dark-mode .bubbleMine.glowFemale {
+.bubbleMine.glowFemale {
   box-shadow: -6px 10px 30px rgba(255, 120, 180, 0.4), -14px 20px 45px rgba(255, 120, 180, 0.12);
 }
 
-html.dark-mode .bubbleMine.glowNeutral {
+.bubbleMine.glowNeutral {
   box-shadow: -6px 10px 30px rgba(168, 162, 158, 0.35), -14px 20px 45px rgba(168, 162, 158, 0.1);
 }
 
-html.dark-mode .bubbleOther.glowMale {
+.bubbleOther.glowMale {
   box-shadow: 6px 10px 30px rgba(99, 155, 255, 0.4), 14px 20px 45px rgba(99, 155, 255, 0.12);
 }
 
-html.dark-mode .bubbleOther.glowFemale {
+.bubbleOther.glowFemale {
   box-shadow: 6px 10px 30px rgba(255, 120, 180, 0.4), 14px 20px 45px rgba(255, 120, 180, 0.12);
 }
 
-html.dark-mode .bubbleOther.glowNeutral {
+.bubbleOther.glowNeutral {
   box-shadow: 6px 10px 30px rgba(168, 162, 158, 0.35), 14px 20px 45px rgba(168, 162, 158, 0.1);
 }
 
 .bubbleOther {
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  background: rgba(28, 25, 23, 0.7);
+  border: 1px solid rgba(68, 64, 60, 0.4);
   border-bottom-left-radius: 4px;
   color: var(--text);
 }
 
-html.dark-mode .bubbleOther {
-  background: rgba(28, 25, 23, 0.7);
-  border-color: rgba(68, 64, 60, 0.4);
-}
-
 .bubbleMine {
-  background: var(--accent);
+  background: rgba(129, 140, 248, 0.85);
   border: none;
   border-bottom-right-radius: 4px;
-  color: #fff;
-}
-
-html.dark-mode .bubbleMine {
-  background: rgba(129, 140, 248, 0.85);
   color: #0c0a09;
 }
 
@@ -286,10 +250,6 @@ html.dark-mode .bubbleMine {
 }
 
 .mine .msgTime {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-html.dark-mode .mine .msgTime {
   color: rgba(12, 10, 9, 0.45);
 }
 
@@ -462,22 +422,12 @@ html.dark-mode .mine .msgTime {
   padding: 14px 20px;
   margin: 0 16px 16px;
   border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid rgba(68, 64, 60, 0.5);
+  background: rgba(28, 25, 23, 0.65);
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
   flex-shrink: 0;
   transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.inputArea:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-dim);
-}
-
-html.dark-mode .inputArea {
-  background: rgba(28, 25, 23, 0.65);
-  border-color: rgba(68, 64, 60, 0.5);
 }
 
 .attachBtn {

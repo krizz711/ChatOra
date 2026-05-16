@@ -5,24 +5,46 @@ import el from './EarthLoader.module.css';
 const SPLASH_DURATION = 2000; // 2 seconds
 const TICK = 50;              // progress update interval
 
-export default function SplashScreen({ onDone }) {
+export default function SplashScreen({ onDone, isLoaded }) {
     const [progress, setProgress] = useState(0);
     const [fadeOut, setFadeOut] = useState(false);
     const moonRef = useRef(null);
     const rafRef = useRef(null);
 
-    // Progress bar
+    const isLoadedRef = useRef(isLoaded);
+
+    useEffect(() => {
+        isLoadedRef.current = isLoaded;
+    }, [isLoaded]);
+
+    // Progress bar logic
     useEffect(() => {
         let elapsed = 0;
+        const TARGET_PCT = 95;
+        const FULL_PCT = 100;
+
         const timer = setInterval(() => {
             elapsed += TICK;
-            const pct = Math.min((elapsed / SPLASH_DURATION) * 100, 100);
-            setProgress(pct);
 
-            if (elapsed >= SPLASH_DURATION) {
-                clearInterval(timer);
-                setFadeOut(true);
-                setTimeout(() => onDone(), 500); // wait for fade-out
+            // Animate towards 95% over 2s
+            const pctTowards95 = (elapsed / SPLASH_DURATION) * TARGET_PCT;
+
+            if (pctTowards95 >= TARGET_PCT) {
+                // We reached 95%. Now wait for isLoaded via the ref so we don't restart the timer!
+                if (isLoadedRef.current) {
+                    // Actual loading is done! Fill to 100% and finish.
+                    setProgress(FULL_PCT);
+                    clearInterval(timer);
+                    setTimeout(() => {
+                        setFadeOut(true);
+                        setTimeout(() => onDone(), 500); // wait for fade-out
+                    }, 400); // stay at 100% briefly for visual satisfaction
+                } else {
+                    // Not loaded yet, stay pinned at 95%
+                    setProgress(TARGET_PCT);
+                }
+            } else {
+                setProgress(pctTowards95);
             }
         }, TICK);
 
@@ -72,8 +94,9 @@ export default function SplashScreen({ onDone }) {
     const label =
         progress < 30 ? 'Initializing...' :
             progress < 60 ? 'Loading resources...' :
-                progress < 90 ? 'Almost there...' :
-                    'Ready!';
+                progress < 90 ? 'Connecting to server...' :
+                    progress < 100 ? 'Finishing setup...' :
+                        'Welcome!';
 
     return (
         <div className={`${s.splashContainer} ${fadeOut ? s.fadeOut : ''}`}>
@@ -113,12 +136,13 @@ export default function SplashScreen({ onDone }) {
                         </div>
 
                         <p className={el.earthText}>
-                            Connecting
+                            Loading
                             <span className={el.dot}>.</span>
                             <span className={el.dot}>.</span>
                             <span className={el.dot}>.</span>
                         </p>
                     </div>
+
 
                     {/* Moon orbit */}
                     <div className={el.moonOrbit}>

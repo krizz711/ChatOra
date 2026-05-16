@@ -10,19 +10,8 @@ import AuthCallback from './pages/AuthCallback';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 
-// Initialize theme
-function initializeTheme() {
-  const savedTheme = localStorage.getItem('nexchat-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+// Theme is now enforced as dark-only via index.css
 
-  if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-    document.documentElement.classList.add('dark-mode');
-  } else {
-    document.documentElement.classList.remove('dark-mode');
-  }
-}
-
-initializeTheme();
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -57,23 +46,8 @@ const PublicRoute = ({ children }) => {
 };
 
 export default function App() {
-  useEffect(() => {
-    // Listen for system theme changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      const savedTheme = localStorage.getItem('nexchat-theme');
-      if (!savedTheme) {
-        if (e.matches) {
-          document.documentElement.classList.add('dark-mode');
-        } else {
-          document.documentElement.classList.remove('dark-mode');
-        }
-      }
-    };
+  // Dark mode is now permanent
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   return (
     <LoaderProvider>

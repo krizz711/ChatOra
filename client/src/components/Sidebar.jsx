@@ -19,18 +19,8 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
   const [userSearch, setUserSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState('all');
   const [userSort, setUserSort] = useState('popularity');
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    return document.documentElement.classList.contains('dark-mode');
-  });
-
   useEffect(() => { loadGroups(); }, []);
 
-  const toggleTheme = () => {
-    const html = document.documentElement;
-    html.classList.toggle('dark-mode');
-    setIsDarkMode(!isDarkMode);
-    localStorage.setItem('nexchat-theme', isDarkMode ? 'light' : 'dark');
-  };
 
   const loadGroups = async () => {
     try {
@@ -112,14 +102,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
       <div className={styles.header}>
         <span className={styles.logo}>NexChat</span>
         <div className={styles.headerActions}>
-          <button
-            className={styles.themeToggle}
-            onClick={toggleTheme}
-            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            <span className={`${styles.themeIcon} ${isDarkMode ? styles.sunIcon : styles.moonIcon}`} />
-          </button>
+
           <button className={styles.iconBtn} onClick={() => navigate('/profile')} title="Profile">
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />

@@ -20,7 +20,7 @@ export default function Home() {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [starringUserId, setStarringUserId] = useState('');
   const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id);
-  const [privateChatUser, setPrivateChatUser] = useState(null);
+  const [isSocketLoaded, setIsSocketLoaded] = useState(false);
 
   const applyStarStats = async (users) => {
     if (!users?.length) return users;
@@ -35,6 +35,9 @@ export default function Home() {
         .sort((a, b) => (b.stars || 0) - (a.stars || 0));
     } catch {
       return users;
+    } finally {
+      // Mark as loaded even if stars fail, just to ensure splash continues
+      setIsSocketLoaded(true);
     }
   };
 
@@ -58,6 +61,14 @@ export default function Home() {
       socket.off('user:offline');
     };
   }, [user.id]);
+
+  // Failsafe timeout to ensure splash screen doesn't get stuck forever
+  useEffect(() => {
+    const fw = setTimeout(() => {
+      setIsSocketLoaded(true);
+    }, 4500); // Wait max 4.5 seconds for socket data before forcing completion
+    return () => clearTimeout(fw);
+  }, []);
 
   // media query fallback for mobile detection
   useEffect(() => {
@@ -109,7 +120,7 @@ export default function Home() {
   const handleSplashDone = useCallback(() => setSplashDone(true), []);
 
   if (!splashDone) {
-    return <SplashScreen onDone={handleSplashDone} />;
+    return <SplashScreen onDone={handleSplashDone} isLoaded={isSocketLoaded} />;
   }
 
   return (

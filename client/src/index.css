@@ -14,23 +14,23 @@
    ═══════════════════════════════════════════ */
 
 :root {
-  /* Surface Palette — warm ivory tones */
-  --bg: #f5f3ef;
-  --surface: rgba(255, 253, 250, 0.75);
-  --surface2: rgba(245, 242, 237, 0.6);
-  --surface3: rgba(233, 229, 222, 0.7);
-  --border: rgba(214, 207, 196, 0.55);
-  --border2: rgba(191, 183, 170, 0.4);
+  /* Surface Palette — deep stone tones (Dark Mode Default) */
+  --bg: #0c0a09;
+  --surface: rgba(28, 25, 23, 0.65);
+  --surface2: rgba(41, 37, 36, 0.45);
+  --surface3: rgba(57, 53, 50, 0.5);
+  --border: rgba(68, 64, 60, 0.5);
+  --border2: rgba(87, 83, 78, 0.35);
 
-  /* Text — deep warm neutrals */
-  --text: #1c1917;
-  --text2: #44403c;
-  --text3: #a8a29e;
+  /* Text — warm soft ivory */
+  --text: #fafaf9;
+  --text2: #d6d3d1;
+  --text3: #78716c;
 
-  /* Accent — warm indigo with depth */
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
-  --accent-dim: rgba(79, 70, 229, 0.1);
+  /* Accent — indigo glow */
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-dim: rgba(129, 140, 248, 0.12);
 
   /* Semantics */
   --green: #059669;
@@ -40,46 +40,12 @@
   /* Shape Language */
   --radius: 16px;
   --radius-sm: 12px;
-  --shadow: 0 1px 3px rgba(28, 25, 23, 0.04), 0 8px 24px rgba(28, 25, 23, 0.03);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.3);
 
   /* Typography */
   --font: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
   --mono: 'JetBrains Mono', monospace;
-  --theme: light;
-}
-
-html.dark-mode {
-  --bg: #0c0a09;
-  --surface: rgba(28, 25, 23, 0.65);
-  --surface2: rgba(41, 37, 36, 0.45);
-  --surface3: rgba(57, 53, 50, 0.5);
-  --border: rgba(68, 64, 60, 0.5);
-  --border2: rgba(87, 83, 78, 0.35);
-  --text: #fafaf9;
-  --text2: #d6d3d1;
-  --text3: #78716c;
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-dim: rgba(129, 140, 248, 0.12);
   --theme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c0a09;
-    --surface: rgba(28, 25, 23, 0.65);
-    --surface2: rgba(41, 37, 36, 0.45);
-    --surface3: rgba(57, 53, 50, 0.5);
-    --border: rgba(68, 64, 60, 0.5);
-    --border2: rgba(87, 83, 78, 0.35);
-    --text: #fafaf9;
-    --text2: #d6d3d1;
-    --text3: #78716c;
-    --accent: #818cf8;
-    --accent-hover: #a5b4fc;
-    --accent-dim: rgba(129, 140, 248, 0.12);
-    --theme: dark;
-  }
 }
 
 /* ═══ BASE ═══ */

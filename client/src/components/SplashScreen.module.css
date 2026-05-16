@@ -10,11 +10,25 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: var(--bg, #0c0a09);
+    /* User custom background animation */
+    background: linear-gradient(180deg, #000000, #1c1917, #44403c);
+    background-size: 100% 300%;
+    animation: bgPanTop 8s ease infinite alternate;
     transition: opacity 0.5s ease, transform 0.5s ease;
     opacity: 1;
     transform: scale(1);
 }
+
+@keyframes bgPanTop {
+    0% {
+        background-position: 50% 100%;
+    }
+
+    100% {
+        background-position: 50% 0%;
+    }
+}
+
 
 .splashContainer.fadeOut {
     opacity: 0;
