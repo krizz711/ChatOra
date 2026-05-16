@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { getSocket, onSocketReset, offSocketReset } from '../socket';
 
 const MAX_MESSAGES = 200; // keep last 200 per room in memory
@@ -8,6 +9,8 @@ export const useChat = (roomId) => {
   const [typingUsers, setTypingUsers] = useState({});
   const [onlineCount, setOnlineCount] = useState(0);
   const typingRef = useRef(null);
+
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     if (!roomId) return;
@@ -25,6 +28,12 @@ export const useChat = (roomId) => {
       const onMessage = (msg) => {
         if (msg.roomId !== roomId) return;
         setMessages(prev => {
+          // If last message is a pending optimistic message with same text and sender, replace it
+          const last = prev[prev.length - 1];
+          if (last && last.pending && last.text === msg.text && last.sender && msg.sender && last.sender.id === msg.sender.id) {
+            const replaced = [...prev.slice(0, -1), msg];
+            return replaced.slice(-MAX_MESSAGES);
+          }
           const updated = [...prev, msg];
           return updated.slice(-MAX_MESSAGES); // keep last 200
         });
@@ -87,10 +96,25 @@ export const useChat = (roomId) => {
 
   const sendMessage = useCallback((text, replyTo = null) => {
     const socket = getSocket();
-    if (!socket || !text.trim()) return;
-    socket.emit('message:send', { roomId, text: text.trim(), replyTo });
+    const trimmed = (text || '').trim();
+    if (!socket || !trimmed) return;
+
+    // optimistic local message
+    const tempId = `temp_${Date.now()}`;
+    const optimistic = {
+      id: tempId,
+      roomId,
+      text: trimmed,
+      sender: currentUser || { id: 'unknown' },
+      timestamp: new Date().toISOString(),
+      type: 'text',
+      pending: true,
+    };
+    setMessages(prev => [...prev, optimistic].slice(-MAX_MESSAGES));
+
+    socket.emit('message:send', { roomId, text: trimmed, replyTo });
     sendTypingStop();
-  }, [roomId]);
+  }, [roomId, currentUser]);
 
   const sendFile = useCallback((fileUrl, fileName, fileType, fileSize) => {
     const socket = getSocket();
