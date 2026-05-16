@@ -1,0 +1,372 @@
+/* ═══════════════════════════════════════════
+   EARTH LOADER — Global loading overlay
+   ═══════════════════════════════════════════ */
+
+/* ── Overlay ── */
+.overlay {
+    position: fixed !important;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.overlay.closing {
+    opacity: 0;
+    pointer-events: none;
+}
+
+html.dark-mode .overlay {
+    background: rgba(0, 0, 0, 0.45);
+}
+
+/* ── Scene Container ── */
+.earthScene {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    transform: scale(0.85);
+    opacity: 0;
+    transition:
+        transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 0.35s ease;
+}
+
+.visible .earthScene {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.closing .earthScene {
+    transform: scale(0.9);
+    opacity: 0;
+}
+
+.earthWrap {
+    position: relative;
+    display: inline-block;
+}
+
+/* ── Earth Globe ── */
+.earthLoader {
+    --watercolor: #3344c1;
+    width: 7.5em;
+    height: 7.5em;
+    background-color: var(--watercolor);
+    position: relative;
+    overflow: hidden;
+    border-radius: 50%;
+    box-shadow:
+        inset 0em 0.5em rgba(255, 255, 255, 0.25),
+        inset 0em -0.5em rgba(0, 0, 0, 0.25);
+    border: solid 0.15em white;
+    font-size: 16px;
+}
+
+.earthLoader svg {
+    position: absolute;
+    width: 7em;
+    height: auto;
+}
+
+/* Land masses */
+.land1 {
+    bottom: -2em;
+    animation: round1 5s infinite linear 0.75s;
+}
+
+.land2 {
+    top: -3em;
+    animation: round1 5s infinite linear;
+}
+
+.land3 {
+    top: -2.5em;
+    animation: round2 5s infinite linear;
+}
+
+.land4 {
+    bottom: -2.2em;
+    animation: round2 5s infinite linear 0.75s;
+}
+
+/* Clouds */
+.cloud1 {
+    bottom: -1em;
+    animation: round1 8s infinite linear 0.4s;
+    opacity: 0.82;
+}
+
+.cloud2 {
+    top: -1.5em;
+    animation: round2 7s infinite linear 2s;
+    opacity: 0.75;
+}
+
+.cloud3 {
+    top: -0.8em;
+    animation: round1 9s infinite linear 1.2s;
+    opacity: 0.7;
+}
+
+.cloud4 {
+    bottom: -1.2em;
+    animation: round2 6.5s infinite linear 3s;
+    opacity: 0.78;
+}
+
+/* ── Text ── */
+.earthText {
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 0.25em;
+    font-size: 1.25em;
+    font-family: "Plus Jakarta Sans", "Gill Sans", Calibri, "Trebuchet MS", sans-serif;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dot {
+    display: inline-block;
+    animation: dotBounce 1.2s infinite ease-in-out;
+}
+
+.dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.3;
+    }
+
+    40% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
+}
+
+/* ── Chat Bubble Badge ── */
+.commentBadge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    z-index: 10;
+    animation: heartbeat 1.5s ease-in-out infinite both;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes heartbeat {
+    from {
+        transform: scale(1);
+        animation-timing-function: ease-out;
+    }
+
+    10% {
+        transform: scale(0.91);
+        animation-timing-function: ease-in;
+    }
+
+    17% {
+        transform: scale(0.98);
+        animation-timing-function: ease-out;
+    }
+
+    33% {
+        transform: scale(0.87);
+        animation-timing-function: ease-in;
+    }
+
+    45% {
+        transform: scale(1);
+        animation-timing-function: ease-out;
+    }
+}
+
+/* ── Rotation Keyframes ── */
+@keyframes round1 {
+    0% {
+        left: -2em;
+        opacity: 1;
+        transform: skewX(0deg) rotate(0deg);
+    }
+
+    30% {
+        left: -6em;
+        opacity: 1;
+        transform: skewX(-25deg) rotate(25deg);
+    }
+
+    31% {
+        left: -6em;
+        opacity: 0;
+        transform: skewX(-25deg) rotate(25deg);
+    }
+
+    35% {
+        left: 7em;
+        opacity: 0;
+        transform: skewX(25deg) rotate(-25deg);
+    }
+
+    45% {
+        left: 7em;
+        opacity: 1;
+        transform: skewX(25deg) rotate(-25deg);
+    }
+
+    100% {
+        left: -2em;
+        opacity: 1;
+        transform: skewX(0deg) rotate(0deg);
+    }
+}
+
+@keyframes round2 {
+    0% {
+        left: 5em;
+        opacity: 1;
+        transform: skewX(0deg) rotate(0deg);
+    }
+
+    75% {
+        left: -7em;
+        opacity: 1;
+        transform: skewX(-25deg) rotate(25deg);
+    }
+
+    76% {
+        left: -7em;
+        opacity: 0;
+        transform: skewX(-25deg) rotate(25deg);
+    }
+
+    77% {
+        left: 8em;
+        opacity: 0;
+        transform: skewX(25deg) rotate(-25deg);
+    }
+
+    80% {
+        left: 8em;
+        opacity: 1;
+        transform: skewX(25deg) rotate(-25deg);
+    }
+
+    100% {
+        left: 5em;
+        opacity: 1;
+        transform: skewX(0deg) rotate(0deg);
+    }
+}
+
+/* ── Moon Orbit ── */
+.moonOrbit {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+}
+
+.moonBall {
+    position: absolute;
+    width: 2.2em;
+    height: 2.2em;
+    background-color: #b0b0b0;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow:
+        inset 0em 0.15em rgba(255, 255, 255, 0.18),
+        inset 0em -0.15em rgba(0, 0, 0, 0.35);
+    border: solid 0.06em #d8d8d8;
+    font-size: 16px;
+    transform: translate(-50%, -50%);
+}
+
+.moonBall svg {
+    position: absolute;
+    width: 2.2em;
+    height: auto;
+}
+
+.mc1 {
+    bottom: -0.6em;
+    animation: round2 6s infinite linear 0.75s;
+}
+
+.mc2 {
+    top: -0.9em;
+    animation: round2 6s infinite linear;
+}
+
+.mc3 {
+    top: -0.7em;
+    animation: round1 6s infinite linear;
+}
+
+.mc4 {
+    bottom: -0.6em;
+    animation: round1 9s infinite linear 2s;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .earthScene {
+        padding: 2rem;
+        font-size: 14px;
+    }
+
+    .earthLoader {
+        width: 6em;
+        height: 6em;
+        font-size: 14px;
+    }
+
+    .earthLoader svg {
+        width: 5.5em;
+    }
+
+    .moonBall {
+        width: 1.8em;
+        height: 1.8em;
+        font-size: 14px;
+    }
+
+    .moonBall svg {
+        width: 1.8em;
+    }
+
+    .earthText {
+        font-size: 1.05em;
+    }
+}

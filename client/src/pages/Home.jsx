@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../socket';
@@ -7,11 +7,13 @@ import { fetchStars, toggleStar } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import ChatRoom from '../components/ChatRoom';
 import PrivateChat from '../components/PrivateChat';
+import SplashScreen from '../components/SplashScreen';
 import styles from './Home.module.css';
 
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [splashDone, setSplashDone] = useState(false);
   const [activeRoom, setActiveRoom] = useState(null);
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'room' | 'dm'
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 900 : false);
@@ -103,6 +105,12 @@ export default function Home() {
       setStarringUserId('');
     }
   };
+
+  const handleSplashDone = useCallback(() => setSplashDone(true), []);
+
+  if (!splashDone) {
+    return <SplashScreen onDone={handleSplashDone} />;
+  }
 
   return (
     <div className={styles.layout}>
