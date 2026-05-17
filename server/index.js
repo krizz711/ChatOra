@@ -1,4 +1,5 @@
 require('dotenv').config();
+const helmet = require('helmet');
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
@@ -8,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const { socketAuth } = require('./middleware/authMiddleware');
 const socketHandler = require('./socket/socketHandler');
 const passport = require('./config/passport');
+const supabase = require('./db/supabase');
 
 const app = express();
 const httpServer = createServer(app);
@@ -42,6 +44,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '1mb' }));
+app.use(helmet({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: false }));
 app.use(cookieParser());
 app.use(passport.initialize());
 
@@ -57,6 +60,7 @@ app.use('/api/', limiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/friends', require('./routes/friends'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
@@ -69,3 +73,13 @@ const PORT = process.env.PORT || 8080;
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+setInterval(async () => {
+  try {
+    const { error } = await supabase.rpc('delete_expired_private_messages');
+    if (error) console.error('[cleanup] DM cleanup failed:', error.message);
+    else console.log('[cleanup] Expired DMs purged');
+  } catch (err) {
+    console.error('[cleanup] Error:', err.message);
+  }
+}, 60 * 60 * 1000);

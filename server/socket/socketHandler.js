@@ -523,6 +523,70 @@ module.exports = (io) => {
       }
     });
 
+    socket.on('call:offer', async ({ toUserId, offer, callType }) => {
+      if (!toUserId || !offer) return;
+      if (user.isGuest) return socket.emit('call:error', { message: 'Guests cannot make calls' });
+      const { data: target } = await supabase.from('users').select('id, calls_enabled').eq('id', toUserId).maybeSingle();
+      if (!target) return socket.emit('call:error', { message: 'User not found' });
+      if (target.calls_enabled === false) return socket.emit('call:declined', { reason: 'calls_disabled', toUserId });
+      const activeTarget = getActiveUser(toUserId);
+      if (!activeTarget) return socket.emit('call:declined', { reason: 'offline', toUserId });
+      activeTarget.socketIds.forEach(sid => {
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.emit('call:incoming', { fromUserId: user.id, fromUsername: user.username, fromAvatar: user.avatar_url, offer, callType: callType || 'voice' });
+      });
+    });
+
+    socket.on('call:answer', ({ toUserId, answer }) => {
+      if (!toUserId || !answer) return;
+      const activeTarget = getActiveUser(toUserId);
+      if (!activeTarget) return;
+      activeTarget.socketIds.forEach(sid => {
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.emit('call:answered', { fromUserId: user.id, answer });
+      });
+    });
+
+    socket.on('call:ice', ({ toUserId, candidate }) => {
+      if (!toUserId || !candidate) return;
+      const activeTarget = getActiveUser(toUserId);
+      if (!activeTarget) return;
+      activeTarget.socketIds.forEach(sid => {
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.emit('call:ice', { fromUserId: user.id, candidate });
+      });
+    });
+
+    socket.on('call:decline', ({ toUserId }) => {
+      if (!toUserId) return;
+      const activeTarget = getActiveUser(toUserId);
+      if (!activeTarget) return;
+      activeTarget.socketIds.forEach(sid => {
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.emit('call:declined', { fromUserId: user.id, reason: 'rejected' });
+      });
+    });
+
+    socket.on('call:end', ({ toUserId }) => {
+      if (!toUserId) return;
+      const activeTarget = getActiveUser(toUserId);
+      if (!activeTarget) return;
+      activeTarget.socketIds.forEach(sid => {
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.emit('call:ended', { fromUserId: user.id });
+      });
+    });
+
+    socket.on('key:exchange', ({ toUserId, publicKey }) => {
+      if (!toUserId || !publicKey) return;
+      const activeTarget = getActiveUser(toUserId);
+      if (!activeTarget) return;
+      activeTarget.socketIds.forEach(sid => {
+        const s = io.sockets.sockets.get(sid);
+        if (s) s.emit('key:exchange', { fromUserId: user.id, publicKey });
+      });
+    });
+
     // ─── DISCONNECT ──────────────────────────────────────────────
     socket.on('disconnect', async () => {
       console.log(`Disconnected: ${user.username}`);

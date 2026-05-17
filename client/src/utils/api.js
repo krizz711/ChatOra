@@ -38,3 +38,12 @@ export const uploadAvatar = (file) => {
   form.append('avatar', file);
   return api.post('/auth/avatar', form, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data);
 };
+
+export const fetchFriends = () => api.get('/friends').then(r => r.data);
+export const fetchFriendRequests = () => api.get('/friends/requests').then(r => r.data);
+export const sendFriendRequest = (userId) => api.post(`/friends/request/${userId}`).then(r => r.data);
+export const acceptFriendRequest = (requestId) => api.post(`/friends/accept/${requestId}`).then(r => r.data);
+export const declineFriendRequest = (requestId) => api.post(`/friends/decline/${requestId}`).then(r => r.data);
+export const unfriend = (userId) => api.delete(`/friends/${userId}`).then(r => r.data);
+export const checkFriendship = (userId) => api.get(`/friends/check/${userId}`).then(r => r.data);
+export const updateCallSettings = (settings) => api.put('/friends/settings', settings).then(r => r.data);

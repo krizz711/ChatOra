@@ -20,8 +20,7 @@ const PrivateRoute = ({ children }) => {
   useEffect(() => {
     if (loading) {
       showLoader('Connecting');
-    } else {
-      hideLoader();
+      return () => hideLoader();
     }
   }, [loading, showLoader, hideLoader]);
 
@@ -36,8 +35,7 @@ const PublicRoute = ({ children }) => {
   useEffect(() => {
     if (loading) {
       showLoader('Connecting');
-    } else {
-      hideLoader();
+      return () => hideLoader();
     }
   }, [loading, showLoader, hideLoader]);
 

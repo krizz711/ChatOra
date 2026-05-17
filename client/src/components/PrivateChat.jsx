@@ -5,7 +5,7 @@ import { downloadChatTxt, downloadFile } from '../utils/download';
 import { format } from 'date-fns';
 import styles from './PrivateChat.module.css';
 
-export default function PrivateChat({ targetUser, messages, onSend, onSendFile, onClose, onStarUser, starringUserId, onViewProfile, fullScreen = false }) {
+export default function PrivateChat({ targetUser, messages, onSend, onSendFile, onClose, onCallUser, onStarUser, starringUserId, onViewProfile, fullScreen = false }) {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -61,6 +61,9 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
           </button>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
+          <button className={styles.iconBtn} onClick={() => onCallUser?.(targetUser, 'voice')} title="Call">
+            Call
+          </button>
           <button className={styles.iconBtn} onClick={() => onViewProfile?.(targetUser)} title="View profile">
             Profile
           </button>

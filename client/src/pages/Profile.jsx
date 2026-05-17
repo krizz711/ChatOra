@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, Pencil, Mail, User, MapPin, Calendar, ArrowLeft, Upload, Globe, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile, uploadAvatar } from '../utils/api';
+import { updateProfile, uploadAvatar, updateCallSettings } from '../utils/api';
 import { getStoredToken } from '../utils/token';
 import axios from 'axios';
 import styles from './Profile.module.css';
@@ -23,6 +23,9 @@ export default function Profile() {
     age: user?.age || '',
   });
   const [saving, setSaving] = useState(false);
+  const [callsEnabled, setCallsEnabled] = useState(user?.calls_enabled ?? true);
+  const [notifSound, setNotifSound] = useState(user?.notification_sound ?? true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -40,6 +43,11 @@ export default function Profile() {
       gender: user?.gender || 'other',
       age: user?.age || '',
     });
+  }, [user]);
+
+  useEffect(() => {
+    setCallsEnabled(user?.calls_enabled ?? true);
+    setNotifSound(user?.notification_sound ?? true);
   }, [user]);
 
   // Check if viewing another user
@@ -203,6 +211,16 @@ export default function Profile() {
     } finally { setSaving(false); }
   };
 
+  const saveSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      await updateCallSettings({ calls_enabled: callsEnabled, notification_sound: notifSound });
+      setMsg('Settings saved!');
+    } catch {
+      setError('Failed to save settings');
+    } finally { setSettingsSaving(false); }
+  };
+
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -314,6 +332,39 @@ export default function Profile() {
               <option value="other">Other</option>
             </select>
           </div>
+
+          <div style={{ marginTop: 8, marginBottom: 2, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.1px', color: 'var(--text3)' }}>
+            Settings
+          </div>
+          <div className={styles.inputWrap} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }} htmlFor="allow-calls">
+              Allow incoming calls
+            </label>
+            <input
+              id="allow-calls"
+              type="checkbox"
+              checked={callsEnabled}
+              onChange={(e) => setCallsEnabled(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: 'var(--accent)' }}
+            />
+          </div>
+          <div className={styles.inputWrap} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }} htmlFor="notif-sound">
+              Notification sounds
+            </label>
+            <input
+              id="notif-sound"
+              type="checkbox"
+              checked={notifSound}
+              onChange={(e) => setNotifSound(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: 'var(--accent)' }}
+            />
+          </div>
+          <motion.button className={styles.primaryBtn}
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            onClick={saveSettings} disabled={settingsSaving}>
+            {settingsSaving ? 'Saving...' : 'Save Settings'}
+          </motion.button>
         </div>
 
         {/* Save */}

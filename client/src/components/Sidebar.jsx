@@ -1,10 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fetchGroups, createGroup, joinGroup, joinByInvite, leaveGroup } from '../utils/api';
+import {
+  fetchGroups,
+  createGroup,
+  joinGroup,
+  joinByInvite,
+  leaveGroup,
+  fetchFriends,
+  fetchFriendRequests,
+  sendFriendRequest,
+  acceptFriendRequest,
+  declineFriendRequest,
+  unfriend,
+} from '../utils/api';
 import styles from './Sidebar.module.css';
 
-export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserClick, onUserStar, starringUserId }) {
+export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserClick, onCallUser, onUserStar, starringUserId }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [groups, setGroups] = useState({ globalGroups: [], userGroups: [], publicGroups: [] });
@@ -16,16 +28,46 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
   const [copiedCode, setCopiedCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [activePanel, setActivePanel] = useState('active');
+  const [friends, setFriends] = useState([]);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState('all');
   const [userSort, setUserSort] = useState('popularity');
-  useEffect(() => { loadGroups(); }, []);
+  useEffect(() => { loadGroups(); loadFriends(); }, []);
+  useEffect(() => { if (activePanel === 'friends') loadFriends(); }, [activePanel]);
 
 
   const loadGroups = async () => {
     try {
       const data = await fetchGroups();
       setGroups(data);
+    } catch { }
+  };
+
+  const loadFriends = async () => {
+    if (user?.isGuest) return;
+    setFriendsLoading(true);
+    try {
+      const [{ friends: f }, { requests: r }] = await Promise.all([fetchFriends(), fetchFriendRequests()]);
+      setFriends(f || []);
+      setFriendRequests(r || []);
+    } catch { }
+    finally { setFriendsLoading(false); }
+  };
+
+  const handleFriendRequestAction = async (action, id) => {
+    try {
+      await action(id);
+      await loadFriends();
+    } catch { }
+  };
+
+  const handleSendFriendRequest = async (userId, e) => {
+    e.stopPropagation();
+    try {
+      await sendFriendRequest(userId);
+      alert('Request sent');
     } catch { }
   };
 
@@ -140,8 +182,8 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
         <button className={`${styles.tabBtn} ${activePanel === 'active' ? styles.tabActive : ''}`} onClick={() => setActivePanel('active')}>
           Active
         </button>
-        <button className={`${styles.tabBtn} ${activePanel === 'discover' ? styles.tabActive : ''}`} onClick={() => setActivePanel('discover')}>
-          Discover
+        <button className={`${styles.tabBtn} ${activePanel === 'friends' ? styles.tabActive : ''}`} onClick={() => setActivePanel('friends')}>
+          Friends
         </button>
       </div>
 
@@ -212,22 +254,87 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
           )}
         </div>}
 
-        {/* Public Groups */}
-        {activePanel === 'discover' && groups.publicGroups?.length > 0 && (
-          <div className={styles.section}>
-            <div className={styles.sectionLabel}>Public Rooms</div>
-            {groups.publicGroups.filter(g =>
-              !groups.userGroups?.find(ug => ug.id === g.id)
-            ).slice(0, 10).map(g => (
-              <div key={g.id} className={styles.discoverRow}>
-                <span className={styles.roomName}>{g.name}</span>
-                <button className={styles.joinSmall} onClick={() => handleJoinPublic(g.id)}>Join</button>
+        {/* Friends */}
+        {activePanel === 'friends' && (
+          <>
+            {friendRequests.length > 0 && (
+              <div className={styles.section}>
+                <div className={styles.sectionLabel}>Requests</div>
+                {friendRequests.map(request => (
+                  <div key={request.id} className={styles.discoverRow}>
+                    <span className={styles.roomName}>{request.from_user?.username || 'Unknown user'}</span>
+                    <div className={styles.userMeta}>
+                      <button className={styles.profileSmall} type="button" onClick={() => handleFriendRequestAction(acceptFriendRequest, request.id)}>
+                        Accept
+                      </button>
+                      <button className={styles.profileSmall} type="button" onClick={() => handleFriendRequestAction(declineFriendRequest, request.id)}>
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-        {activePanel === 'discover' && !groups.publicGroups?.length && (
-          <div className={styles.emptyState}>No public rooms available yet.</div>
+            )}
+
+            <div className={styles.section}>
+              <div className={styles.sectionLabel}>Friends</div>
+              {friendsLoading && <div className={styles.emptyState}>Loading...</div>}
+              {!friendsLoading && friends.length === 0 && (
+                <div className={styles.emptyState}>No friends yet. Find people in the Active tab and add them.</div>
+              )}
+              {!friendsLoading && friends.map(friend => (
+                <div key={friend.id} className={styles.userBtn} onClick={() => onUserClick(friend)} role="button" tabIndex={0} title={`Message ${friend.username}`}>
+                  <div className="avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
+                    {friend.avatar_url
+                      ? <img src={friend.avatar_url} alt={friend.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      : friend.username?.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className={styles.userContent}>
+                    <span className={styles.userName}>{friend.username}</span>
+                    <div className={styles.userMeta}>
+                      <button
+                        className={styles.profileSmall}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCallUser?.(friend, 'voice');
+                        }}
+                        title={`Call ${friend.username}`}
+                      >
+                        Call
+                      </button>
+                      <button
+                        className={styles.profileSmall}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUserClick(friend);
+                        }}
+                        title={`Message ${friend.username}`}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </button>
+                      <button
+                        className={styles.profileSmall}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFriendRequestAction(unfriend, friend.id);
+                        }}
+                        title={`Unfriend ${friend.username}`}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                          <path d="M18 6 6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Online Users */}
@@ -277,6 +384,31 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                 <div className={styles.userContent}>
                   <span className={styles.userName}>{u.username}</span>
                   <div className={styles.userMeta}>
+                    {u.id !== user?.id && (
+                      <button
+                        className={styles.profileSmall}
+                        type="button"
+                        onClick={(e) => handleSendFriendRequest(u.id, e)}
+                        disabled={u.id?.startsWith('guest_')}
+                        title={u.id?.startsWith('guest_') ? 'Guest users cannot receive friend requests' : `Send friend request to ${u.username}`}
+                      >
+                        Add friend
+                      </button>
+                    )}
+                    {u.id !== user?.id && (
+                      <button
+                        className={styles.profileSmall}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCallUser?.(u, 'voice');
+                        }}
+                        disabled={u.id?.startsWith('guest_')}
+                        title={u.id?.startsWith('guest_') ? 'Guest users cannot be called' : `Call ${u.username}`}
+                      >
+                        Call
+                      </button>
+                    )}
                     <button
                       className={styles.profileSmall}
                       type="button"

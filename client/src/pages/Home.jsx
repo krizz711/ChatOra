@@ -2,11 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../socket';
+import useCall from '../hooks/useCall';
 import { usePrivateChat } from '../hooks/usePrivateChat';
 import { fetchStars, toggleStar } from '../utils/api';
 import Sidebar from '../components/Sidebar';
 import ChatRoom from '../components/ChatRoom';
 import PrivateChat from '../components/PrivateChat';
+import IncomingCall from '../components/IncomingCall';
+import CallingScreen from '../components/CallingScreen';
 import SplashScreen from '../components/SplashScreen';
 import styles from './Home.module.css';
 
@@ -15,11 +18,13 @@ export default function Home() {
   const navigate = useNavigate();
   const [splashDone, setSplashDone] = useState(false);
   const [activeRoom, setActiveRoom] = useState(null);
+  const [privateChatUser, setPrivateChatUser] = useState(null);
   const [mobileView, setMobileView] = useState('list'); // 'list' | 'room' | 'dm'
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 900 : false);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [starringUserId, setStarringUserId] = useState('');
   const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id);
+  const { callState, callType, remoteUser, incomingCall, startCall, acceptCall, declineCall, endCall, localVideoRef, remoteVideoRef } = useCall(user);
   const [isSocketLoaded, setIsSocketLoaded] = useState(false);
 
   const applyStarStats = async (users) => {
@@ -89,6 +94,10 @@ export default function Home() {
     if (isMobile) setMobileView('room');
   };
 
+  const handleCall = (targetUser, type = 'voice') => {
+    startCall(targetUser, type);
+  };
+
   const handleViewProfile = (u) => {
     navigate(`/profile?user=${u.id}`);
   };
@@ -133,6 +142,7 @@ export default function Home() {
             onRoomSelect={handleRoomSelect}
             onlineUsers={onlineUsers}
             onUserClick={handleUserClick}
+            onCallUser={handleCall}
             onUserStar={handleUserStar}
             starringUserId={starringUserId}
           />
@@ -162,6 +172,7 @@ export default function Home() {
                   onSend={(text) => sendPrivateMessage(activeChat, text)}
                   onSendFile={(url, name, type) => sendPrivateFile(activeChat, url, name, type)}
                   onClose={() => { closeChat(); setPrivateChatUser(null); setMobileView('list'); }}
+                  onCallUser={handleCall}
                   onStarUser={handleUserStar}
                   starringUserId={starringUserId}
                   onViewProfile={handleViewProfile}
@@ -178,6 +189,7 @@ export default function Home() {
             onRoomSelect={handleRoomSelect}
             onlineUsers={onlineUsers}
             onUserClick={handleUserClick}
+            onCallUser={handleCall}
             onUserStar={handleUserStar}
             starringUserId={starringUserId}
           />
@@ -205,11 +217,29 @@ export default function Home() {
                 onSend={(text) => sendPrivateMessage(activeChat, text)}
                 onSendFile={(url, name, type) => sendPrivateFile(activeChat, url, name, type)}
                 onClose={closeChat}
+                onCallUser={handleCall}
                 onStarUser={handleUserStar}
                 starringUserId={starringUserId}
                 onViewProfile={handleViewProfile}
               />
             </div>
+          )}
+          {incomingCall && callState === 'incoming' && (
+            <IncomingCall
+              incomingCall={incomingCall}
+              onAccept={acceptCall}
+              onDecline={declineCall}
+            />
+          )}
+          {(callState === 'calling' || callState === 'connected' || callState === 'ended') && remoteUser && (
+            <CallingScreen
+              remoteUser={remoteUser}
+              callState={callState}
+              callType={callType}
+              onEnd={endCall}
+              localVideoRef={localVideoRef}
+              remoteVideoRef={remoteVideoRef}
+            />
           )}
         </>
       )}
