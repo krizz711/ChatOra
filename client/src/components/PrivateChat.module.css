@@ -3,8 +3,8 @@
   height: 500px;
   display: flex;
   flex-direction: column;
-  background: #000000;
-  border: 1px solid rgba(61, 68, 81, 0.5);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   overflow: hidden;
@@ -17,8 +17,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(61, 68, 81, 0.4);
-  background: #000000;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
   transition: all 0.3s ease;
 }
 
@@ -136,9 +136,9 @@
 }
 
 .bubbleMine {
-  background: rgba(146, 204, 255, 0.42);
-  color: #0f3346;
-  border: 1px solid rgba(0, 97, 147, 0.2);
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
   border-bottom-right-radius: 3px;
 }
 
@@ -183,7 +183,7 @@
   align-items: center;
   gap: 6px;
   padding: 10px 12px;
-  border-top: 1px solid rgba(61, 68, 81, 0.4);
+  border-top: 1px solid var(--border);
   transition: all 0.3s ease;
 }
 

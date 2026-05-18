@@ -23,6 +23,12 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 900 : false);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [starringUserId, setStarringUserId] = useState('');
+  const [activePanel, setActivePanel] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebarActivePanel') || 'active';
+    }
+    return 'active';
+  });
   const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id);
   const { callState, callType, remoteUser, incomingCall, startCall, acceptCall, declineCall, endCall, localVideoRef, remoteVideoRef } = useCall(user);
   const [isSocketLoaded, setIsSocketLoaded] = useState(false);
@@ -164,6 +170,13 @@ export default function Home() {
     }
   }, [user.id, starringUserId]);
 
+  const handleSetActivePanel = useCallback((panel) => {
+    setActivePanel(panel);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarActivePanel', panel);
+    }
+  }, []);
+
   const handleSplashDone = useCallback(() => setSplashDone(true), []);
 
   if (!splashDone) {
@@ -183,6 +196,8 @@ export default function Home() {
             onCallUser={handleCall}
             onUserStar={handleUserStar}
             starringUserId={starringUserId}
+            activePanel={activePanel}
+            onSetActivePanel={handleSetActivePanel}
           />
         ) : mobileView === 'room' ? (
           <div className={styles.mobileChatView}>
@@ -230,6 +245,8 @@ export default function Home() {
             onCallUser={handleCall}
             onUserStar={handleUserStar}
             starringUserId={starringUserId}
+            activePanel={activePanel}
+            onSetActivePanel={handleSetActivePanel}
           />
 
           <main className={styles.main}>

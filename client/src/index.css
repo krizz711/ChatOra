@@ -14,23 +14,23 @@
    ═══════════════════════════════════════════ */
 
 :root {
-  /* Surface Palette — deep stone tones (Dark Mode Default) */
-  --bg: #0c0a09;
-  --surface: rgba(28, 25, 23, 0.65);
-  --surface2: rgba(41, 37, 36, 0.45);
-  --surface3: rgba(57, 53, 50, 0.5);
-  --border: rgba(68, 64, 60, 0.5);
-  --border2: rgba(87, 83, 78, 0.35);
+  /* Surface Palette — light serene tones (Light Mode Default) */
+  --bg: #fdfcfb;
+  --surface: rgba(255, 255, 255, 0.75);
+  --surface2: rgba(245, 245, 244, 0.65);
+  --surface3: rgba(231, 229, 228, 0.6);
+  --border: rgba(214, 211, 209, 0.55);
+  --border2: rgba(168, 162, 158, 0.4);
 
-  /* Text — warm soft ivory */
-  --text: #fafaf9;
-  --text2: #d6d3d1;
+  /* Text — deep stone */
+  --text: #1c1917;
+  --text2: #44403c;
   --text3: #78716c;
 
-  /* Accent — indigo glow */
-  --accent: #818cf8;
-  --accent-hover: #a5b4fc;
-  --accent-dim: rgba(129, 140, 248, 0.12);
+  /* Accent — sky light blue */
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-dim: rgba(59, 130, 246, 0.12);
 
   /* Semantics */
   --green: #059669;
@@ -40,12 +40,12 @@
   /* Shape Language */
   --radius: 16px;
   --radius-sm: 12px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.1);
 
   /* Typography */
   --font: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
   --mono: 'JetBrains Mono', monospace;
-  --theme: dark;
+  --theme: light;
 }
 
 /* ═══ BASE ═══ */
@@ -80,7 +80,7 @@ html::before {
   height: 600px;
   top: -15%;
   left: -5%;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.5), transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.35), transparent 70%);
 }
 
 html::after {
@@ -88,11 +88,11 @@ html::after {
   height: 500px;
   bottom: -10%;
   right: -5%;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.35), transparent 70%);
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.25), transparent 70%);
 }
 
 html.dark-mode::before {
-  background: radial-gradient(circle, rgba(129, 140, 248, 0.4), transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%);
   opacity: 0.25;
 }
 
@@ -114,6 +114,7 @@ html.dark-mode::after {
   background-size: 256px 256px;
   pointer-events: none;
   z-index: 0;
+  opacity: 0.25;
 }
 
 #root>* {
@@ -132,7 +133,7 @@ html.dark-mode::after {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border2);
+  background: var(--border);
   border-radius: 99px;
 }
 

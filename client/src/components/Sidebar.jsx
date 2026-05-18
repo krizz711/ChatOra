@@ -17,7 +17,7 @@ import {
 } from '../utils/api';
 import styles from './Sidebar.module.css';
 
-export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserClick, onCallUser, onUserStar, starringUserId }) {
+export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserClick, onCallUser, onUserStar, starringUserId, activePanel, onSetActivePanel }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [groups, setGroups] = useState({ globalGroups: [], userGroups: [], publicGroups: [] });
@@ -28,7 +28,6 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
   const [inviteCode, setInviteCode] = useState('');
   const [copiedCode, setCopiedCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activePanel, setActivePanel] = useState('active');
   const [friends, setFriends] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
   const [pendingOutgoing, setPendingOutgoing] = useState([]);
@@ -199,15 +198,15 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
       </div>
 
       <div className={styles.tabs}>
-        <button className={`${styles.tabBtn} ${activePanel === 'rooms' ? styles.tabActive : ''}`} onClick={() => setActivePanel('rooms')}>
-          Rooms
-        </button>
-        <button className={`${styles.tabBtn} ${activePanel === 'active' ? styles.tabActive : ''}`} onClick={() => setActivePanel('active')}>
+        <button className={`${styles.tabBtn} ${activePanel === 'active' ? styles.tabActive : ''}`} onClick={() => onSetActivePanel('active')}>
           Active
+        </button>
+        <button className={`${styles.tabBtn} ${activePanel === 'rooms' ? styles.tabActive : ''}`} onClick={() => onSetActivePanel('rooms')}>
+          Rooms
         </button>
         <button
           className={`${styles.tabBtn} ${activePanel === 'friends' ? styles.tabActive : ''}`}
-          onClick={() => { setActivePanel('friends'); setRequestCount(0); }}
+          onClick={() => { onSetActivePanel('friends'); setRequestCount(0); }}
         >
           Friends
           {requestCount > 0 && (
