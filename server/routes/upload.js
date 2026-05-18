@@ -20,7 +20,7 @@ router.post('/', authMiddleware, upload.single('file'), async (req, res) => {
 });
 
 // Proxy file fetch for authenticated clients to avoid browser CORS issues on remote asset hosts.
-router.get('/fetch', async (req, res) => {
+router.get('/fetch', authMiddleware, async (req, res) => {
   try {
     const { url } = req.query;
     if (!url || typeof url !== 'string') {

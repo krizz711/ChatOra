@@ -13,7 +13,7 @@ export const deriveSharedKey = (mySecretKeyB64, theirPublicKeyB64) => {
 
 export const encryptMessage = (text, sharedKeyB64) => {
   const nonce = nacl.randomBytes(nacl.box.nonceLength);
-  const message = encodeUTF8(text);
+  const message = decodeUTF8(text);
   const box = nacl.box.after(message, nonce, decodeBase64(sharedKeyB64));
   return { ciphertext: encodeBase64(box), nonce: encodeBase64(nonce) };
 };

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { uploadFile } from '../utils/api';
@@ -6,7 +6,83 @@ import { downloadChatTxt, downloadChatZip, downloadFile } from '../utils/downloa
 import { format } from 'date-fns';
 import styles from './ChatRoom.module.css';
 
-export default function ChatRoom({ room, onUserClick }) {
+const MessageRow = memo(({ msg, isMine, showAvatar, user, onUserClick, onReply, styles }) => {
+  const sender = msg.sender || {};
+  const glowClass = sender.gender === 'female' ? styles.glowFemale : sender.gender === 'male' ? styles.glowMale : styles.glowNeutral;
+  const fmtSize = (bytes) => bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${(bytes / 1024).toFixed(0)}KB`;
+  const isImage = (type) => type?.startsWith('image/');
+
+  return (
+    <div className={`${styles.msgRow} ${isMine ? styles.mine : ''} fade-in`}>
+      {!isMine && (
+        <div className={styles.avatarCol} style={{ visibility: showAvatar ? 'visible' : 'hidden' }}>
+          <div className="avatar" style={{ width: 32, height: 32, fontSize: 12, cursor: 'pointer' }}
+            onClick={() => onUserClick?.(sender)}
+            title="Click to message">
+            {sender.avatar_url
+              ? <img src={sender.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+              : sender.username?.slice(0, 2).toUpperCase() || '??'}
+          </div>
+        </div>
+      )}
+
+      <div className={styles.msgContent}>
+        {showAvatar && !isMine && (
+          <div className={styles.senderName} onClick={() => onUserClick?.(sender)} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Click to message">
+            {sender.username || 'Unknown'}
+          </div>
+        )}
+
+        {msg.replyTo && (
+          <div className={styles.replyBadge}>Replying to message</div>
+        )}
+
+        <div className={`${styles.bubble} ${isMine ? styles.bubbleMine : styles.bubbleOther} ${glowClass}`}
+          onDoubleClick={() => onReply?.(msg)}>
+
+          {msg.type === 'file' && (
+            <div className={styles.fileMsg}>
+              {isImage(msg.fileType) ? (
+                <img
+                  src={msg.fileUrl}
+                  alt={msg.fileName}
+                  className={styles.imageMsg}
+                  onClick={() => window.open(msg.fileUrl, '_blank')}
+                />
+              ) : (
+                <div className={styles.fileCard}>
+                  <div className={styles.fileIcon}>
+                    {msg.fileType === 'application/pdf' ? 'PDF' : 'File'}
+                  </div>
+                  <div>
+                    <div className={styles.fileName}>{msg.fileName}</div>
+                    {msg.fileSize && (
+                      <div className={styles.fileSize}>{fmtSize(msg.fileSize)}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+              <button
+                className={styles.dlBtn}
+                onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)}
+              >
+                Download
+              </button>
+            </div>
+          )}
+
+          {msg.text && <div className={styles.msgText}>{msg.text}</div>}
+        </div>
+
+        <div className={styles.msgTime}>
+          {format(new Date(msg.timestamp), 'HH:mm')}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+function ChatRoom({ room, onUserClick }) {
   const { user } = useAuth();
   const { messages, typingUsers, onlineCount, sendMessage, sendFile, sendTypingStart, sendTypingStop } = useChat(room.id);
   const [text, setText] = useState('');
@@ -43,11 +119,7 @@ export default function ChatRoom({ room, onUserClick }) {
     else sendTypingStop();
   };
 
-  const getGlowClass = (gender) => {
-    if (gender === 'female') return styles.glowFemale;
-    if (gender === 'male') return styles.glowMale;
-    return styles.glowNeutral;
-  };
+  
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -68,8 +140,7 @@ export default function ChatRoom({ room, onUserClick }) {
     finally { setUploading(false); fileRef.current.value = ''; }
   };
 
-  const isImage = (type) => type?.startsWith('image/');
-  const fmtSize = (bytes) => bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${(bytes / 1024).toFixed(0)}KB`;
+  
 
   return (
     <div className={styles.room}>
@@ -112,75 +183,18 @@ export default function ChatRoom({ room, onUserClick }) {
           const sender = msg.sender || {};
           const isMine = sender.id === user.id;
           const showAvatar = i === 0 || messages[i - 1]?.sender?.id !== sender.id;
-          const glowClass = getGlowClass(sender.gender);
 
           return (
-            <div key={msg.id} className={`${styles.msgRow} ${isMine ? styles.mine : ''} fade-in`}>
-              {!isMine && (
-                <div className={styles.avatarCol} style={{ visibility: showAvatar ? 'visible' : 'hidden' }}>
-                  <div className="avatar" style={{ width: 32, height: 32, fontSize: 12, cursor: 'pointer' }}
-                    onClick={() => onUserClick?.(sender)}
-                    title="Click to message">
-                    {sender.avatar_url
-                      ? <img src={sender.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                      : sender.username?.slice(0, 2).toUpperCase() || '??'}
-                  </div>
-                </div>
-              )}
-
-              <div className={styles.msgContent}>
-                {showAvatar && !isMine && (
-                  <div className={styles.senderName} onClick={() => onUserClick?.(sender)} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Click to message">
-                    {sender.username || 'Unknown'}
-                  </div>
-                )}
-
-                {msg.replyTo && (
-                  <div className={styles.replyBadge}>Replying to message</div>
-                )}
-
-                <div className={`${styles.bubble} ${isMine ? styles.bubbleMine : styles.bubbleOther} ${glowClass}`}
-                  onDoubleClick={() => setReplyTo(msg)}>
-
-                  {msg.type === 'file' && (
-                    <div className={styles.fileMsg}>
-                      {isImage(msg.fileType) ? (
-                        <img
-                          src={msg.fileUrl}
-                          alt={msg.fileName}
-                          className={styles.imageMsg}
-                          onClick={() => window.open(msg.fileUrl, '_blank')}
-                        />
-                      ) : (
-                        <div className={styles.fileCard}>
-                          <div className={styles.fileIcon}>
-                            {msg.fileType === 'application/pdf' ? 'PDF' : 'File'}
-                          </div>
-                          <div>
-                            <div className={styles.fileName}>{msg.fileName}</div>
-                            {msg.fileSize && (
-                              <div className={styles.fileSize}>{fmtSize(msg.fileSize)}</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      <button
-                        className={styles.dlBtn}
-                        onClick={() => downloadFile(msg.fileUrl, msg.fileName, msg.fileType)}
-                      >
-                        Download
-                      </button>
-                    </div>
-                  )}
-
-                  {msg.text && <div className={styles.msgText}>{msg.text}</div>}
-                </div>
-
-                <div className={styles.msgTime}>
-                  {format(new Date(msg.timestamp), 'HH:mm')}
-                </div>
-              </div>
-            </div>
+            <MessageRow
+              key={msg.id}
+              msg={msg}
+              isMine={isMine}
+              showAvatar={showAvatar}
+              user={user}
+              onUserClick={onUserClick}
+              onReply={setReplyTo}
+              styles={styles}
+            />
           );
         })}
 
@@ -236,3 +250,5 @@ export default function ChatRoom({ room, onUserClick }) {
     </div>
   );
 }
+
+export default memo(ChatRoom);

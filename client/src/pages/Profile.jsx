@@ -299,7 +299,7 @@ export default function Profile() {
         </div>
 
         {/* Edit Form */}
-        <div className={styles.formSection}>
+        <form className={styles.formSection} onSubmit={(e) => { e.preventDefault(); save(); }}>
           <div className={styles.inputWrap}>
             <input name="username" value={form.username} onChange={handle} placeholder="Username" />
             <Pencil className={styles.inputIcon} size={14} />
@@ -365,14 +365,14 @@ export default function Profile() {
             onClick={saveSettings} disabled={settingsSaving}>
             {settingsSaving ? 'Saving...' : 'Save Settings'}
           </motion.button>
-        </div>
 
-        {/* Save */}
-        <motion.button className={styles.primaryBtn}
-          whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-          onClick={save} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
-        </motion.button>
+          {/* Save */}
+          <motion.button type="submit" className={styles.primaryBtn}
+            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+            disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </motion.button>
+        </form>
 
         {/* Info Footer */}
         <div className={styles.infoGrid}>

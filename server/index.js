@@ -10,6 +10,7 @@ const { socketAuth } = require('./middleware/authMiddleware');
 const socketHandler = require('./socket/socketHandler');
 const passport = require('./config/passport');
 const supabase = require('./db/supabase');
+const { authMiddleware } = require('./middleware/authMiddleware');
 
 const app = express();
 const httpServer = createServer(app);
@@ -43,7 +44,11 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json({ limit: '1mb' }));
+const jsonParser = express.json({ limit: '1mb' });
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/billing/webhook') return next();
+  return jsonParser(req, res, next);
+});
 app.use(helmet({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: false }));
 app.use(cookieParser());
 app.use(passport.initialize());
@@ -60,7 +65,9 @@ app.use('/api/', limiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/upload', require('./routes/upload'));
-app.use('/api/friends', require('./routes/friends'));
+app.use('/api/friends', require('./routes/friends')(io));
+app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), require('./routes/billing').webhook);
+app.use('/api/billing', authMiddleware, require('./routes/billing'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
@@ -69,14 +76,17 @@ io.use(socketAuth);
 socketHandler(io);
 
 // Start Server
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 
 setInterval(async () => {
   try {
-    const { error } = await supabase.rpc('delete_expired_private_messages');
+    const { error } = await supabase
+      .from('private_messages')
+      .delete()
+      .lt('expires_at', new Date().toISOString());
     if (error) console.error('[cleanup] DM cleanup failed:', error.message);
     else console.log('[cleanup] Expired DMs purged');
   } catch (err) {

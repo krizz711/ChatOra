@@ -16,7 +16,7 @@ const normalizeGender = (value) => {
 const parseAge = (value) => {
   if (value === undefined || value === null || value === '') return null;
   const age = Number(value);
-  if (!Number.isInteger(age)) return null;
+  if (!Number.isInteger(age) || age < 13 || age > 120) return null;
   return age;
 };
 
@@ -184,7 +184,7 @@ router.post('/register', async (req, res) => {
       .from('users')
       .select('id')
       .or(`username.eq.${username},email.eq.${email}`)
-      .single();
+      .maybeSingle();
 
     if (existing) return res.status(409).json({ error: 'Username or email already taken' });
 
@@ -334,17 +334,8 @@ router.post('/star/:userId', authMiddleware, async (req, res) => {
       .maybeSingle();
 
     if (existingErr) throw existingErr;
-    const { data: targetUser, error: countErr } = await supabase
-      .from('users')
-      .select('star_count')
-      .eq('id', userId)
-      .single();
 
-    if (countErr) throw countErr;
-
-    const currentCount = targetUser?.star_count || 0;
     let starred = false;
-    let nextCount = currentCount;
 
     if (existing) {
       const { error: deleteErr } = await supabase
@@ -355,7 +346,6 @@ router.post('/star/:userId', authMiddleware, async (req, res) => {
 
       if (deleteErr) throw deleteErr;
       starred = false;
-      nextCount = Math.max(0, currentCount - 1);
     } else {
       const { error: insErr } = await supabase
         .from('user_stars')
@@ -363,17 +353,24 @@ router.post('/star/:userId', authMiddleware, async (req, res) => {
 
       if (insErr) throw insErr;
       starred = true;
-      nextCount = currentCount + 1;
     }
+
+    // Count actual rows to avoid race-condition drift
+    const { count: nextCount, error: countErr } = await supabase
+      .from('user_stars')
+      .select('*', { count: 'exact', head: true })
+      .eq('starred_user_id', userId);
+
+    if (countErr) throw countErr;
 
     const { error: updateErr } = await supabase
       .from('users')
-      .update({ star_count: nextCount })
+      .update({ star_count: nextCount || 0 })
       .eq('id', userId);
 
     if (updateErr) throw updateErr;
 
-    res.json({ starred, starCount: nextCount });
+    res.json({ starred, starCount: nextCount || 0 });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

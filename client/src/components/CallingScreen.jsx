@@ -1,4 +1,4 @@
-import EarthLoader from './EarthLoader';
+// Spinner removed; using inline spinner in JSX to avoid LoaderContext dependency
 
 export default function CallingScreen({ remoteUser, callState, callType, onEnd, localVideoRef, remoteVideoRef }) {
   if (callState === 'ended') {
@@ -39,7 +39,16 @@ export default function CallingScreen({ remoteUser, callState, callType, onEnd, 
     >
       {callState === 'calling' && (
         <>
-          <EarthLoader />
+          <div style={{
+            width: 80,
+            height: 80,
+            borderRadius: '50%',
+            border: '3px solid var(--border)',
+            borderTop: '3px solid var(--accent)',
+            animation: 'spin 1s linear infinite',
+            marginBottom: 24,
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <div style={{ marginTop: 18, fontSize: 18, fontWeight: 700, textAlign: 'center' }}>
             Calling {remoteUser?.username}...
           </div>

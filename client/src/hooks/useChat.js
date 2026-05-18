@@ -94,6 +94,25 @@ export const useChat = (roomId) => {
     };
   }, [roomId]);
 
+  const sendTypingStart = useCallback(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    socket.emit('typing:start', { roomId });
+    if (typingRef.current) clearTimeout(typingRef.current);
+    typingRef.current = setTimeout(() => {
+      const s = getSocket();
+      if (s) s.emit('typing:stop', { roomId });
+      if (typingRef.current) clearTimeout(typingRef.current);
+    }, 3000);
+  }, [roomId]);
+
+  const sendTypingStop = useCallback(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    socket.emit('typing:stop', { roomId });
+    if (typingRef.current) clearTimeout(typingRef.current);
+  }, [roomId]);
+
   const sendMessage = useCallback((text, replyTo = null) => {
     const socket = getSocket();
     const trimmed = (text || '').trim();
@@ -114,31 +133,12 @@ export const useChat = (roomId) => {
 
     socket.emit('message:send', { roomId, text: trimmed, replyTo });
     sendTypingStop();
-  }, [roomId, currentUser]);
+  }, [roomId, currentUser, sendTypingStop]);
 
   const sendFile = useCallback((fileUrl, fileName, fileType, fileSize) => {
     const socket = getSocket();
     if (!socket) return;
     socket.emit('message:file', { roomId, fileUrl, fileName, fileType, fileSize });
-  }, [roomId]);
-
-  const sendTypingStart = useCallback(() => {
-    const socket = getSocket();
-    if (!socket) return;
-    socket.emit('typing:start', { roomId });
-    if (typingRef.current) clearTimeout(typingRef.current);
-    typingRef.current = setTimeout(() => {
-      const s = getSocket();
-      if (s) s.emit('typing:stop', { roomId });
-      if (typingRef.current) clearTimeout(typingRef.current);
-    }, 3000);
-  }, [roomId]);
-
-  const sendTypingStop = useCallback(() => {
-    const socket = getSocket();
-    if (!socket) return;
-    socket.emit('typing:stop', { roomId });
-    if (typingRef.current) clearTimeout(typingRef.current);
   }, [roomId]);
 
   return { messages, typingUsers, onlineCount, sendMessage, sendFile, sendTypingStart, sendTypingStop };

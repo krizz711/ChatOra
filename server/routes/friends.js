@@ -1,7 +1,9 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const supabase = require('../db/supabase');
+const { getActiveUser } = require('../socket/socketHandler');
 
+let _io = null;
 const router = express.Router();
 
 router.use(authMiddleware);
@@ -9,7 +11,6 @@ router.use(authMiddleware);
 const friendshipKey = (a, b) => a < b ? [a, b] : [b, a];
 
 const acceptRequest = async (requestId, acceptorId, requesterId, res) => {
-    // Update the request status to accepted
     const { error: updateError } = await supabase
         .from('friend_requests')
         .update({ status: 'accepted' })
@@ -19,7 +20,6 @@ const acceptRequest = async (requestId, acceptorId, requesterId, res) => {
 
     const [user_a_id, user_b_id] = friendshipKey(acceptorId, requesterId);
 
-    // Upsert into friendships
     const { data: friendship, error: upsertError } = await supabase
         .from('friendships')
         .upsert(
@@ -35,7 +35,6 @@ const acceptRequest = async (requestId, acceptorId, requesterId, res) => {
 };
 
 // GET / => Query friendships table joining users on both user_a_id and user_b_id.
-// Return the friend that is not the current user. Include id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled on each friend object plus friendship_id and friends_since.
 router.get('/', async (req, res) => {
     try {
         const { data: friendships, error } = await supabase
@@ -44,45 +43,34 @@ router.get('/', async (req, res) => {
         id,
         friends_since,
         user_a_id,
-        user_b_id,
-        user_a:users!friendships_user_a_id_fkey (id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled),
-        user_b:users!friendships_user_b_id_fkey (id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled)
+        user_b_id
       `)
             .or(`user_a_id.eq.${req.user.id},user_b_id.eq.${req.user.id}`);
 
         if (error) {
-            // If the specific foreign key name fails, fallback to auto-detection format
-            const { data: fallbackFriendships, error: fallbackError } = await supabase
-                .from('friendships')
-                .select(`
-          id,
-          friends_since,
-          user_a_id,
-          user_b_id,
-          user_a:user_a_id (id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled),
-          user_b:user_b_id (id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled)
-        `)
-                .or(`user_a_id.eq.${req.user.id},user_b_id.eq.${req.user.id}`);
-
-            if (fallbackError) return res.status(500).json({ error: 'Database query failed' });
-
-            const friendsListInfo = fallbackFriendships.map(f => {
-                const friendData = f.user_a_id === req.user.id ? f.user_b : f.user_a;
-                return {
-                    ...friendData,
-                    friendship_id: f.id,
-                    friends_since: f.friends_since
-                };
-            });
-            return res.json(friendsListInfo);
+            console.error('friendships query error:', JSON.stringify(error));
+            return res.status(500).json({ error: 'Database query failed', detail: error.message });
         }
 
+        // Fetch friend user data separately to avoid FK alias issues
+        const friendIds = friendships.map(f =>
+            f.user_a_id === req.user.id ? f.user_b_id : f.user_a_id
+        );
+
+        const { data: friendUsers } = friendIds.length ? await supabase
+            .from('users')
+            .select('id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled')
+            .in('id', friendIds) : { data: [] };
+
+        const userMap = {};
+        (friendUsers || []).forEach(u => { userMap[u.id] = u; });
+
         const friendsList = friendships.map(f => {
-            const friendData = f.user_a_id === req.user.id ? f.user_b : f.user_a;
+            const friendId = f.user_a_id === req.user.id ? f.user_b_id : f.user_a_id;
             return {
-                ...friendData,
+                ...(userMap[friendId] || { id: friendId }),
                 friendship_id: f.id,
-                friends_since: f.friends_since
+                friends_since: f.friends_since,
             };
         });
 
@@ -93,7 +81,6 @@ router.get('/', async (req, res) => {
 });
 
 // GET /requests => Query friend_requests where to_user_id = current user id and status = pending.
-// Join from_user selecting id, username, avatar_url, star_count. Order by created_at descending.
 router.get('/requests', async (req, res) => {
     try {
         const { data: requests, error } = await supabase
@@ -112,7 +99,6 @@ router.get('/requests', async (req, res) => {
 });
 
 // POST /request/:userId
-// Block guests. Block self-friend. Block guest targets. Check friendships table using friendshipKey
 router.post('/request/:userId', async (req, res) => {
     if (req.user.isGuest) return res.status(403).json({ error: 'Guests cannot send friend requests' });
 
@@ -123,7 +109,6 @@ router.post('/request/:userId', async (req, res) => {
     const [user_a_id, user_b_id] = friendshipKey(req.user.id, targetId);
 
     try {
-        // Check friendships table
         const { data: existingFriendship, error: friendshipError } = await supabase
             .from('friendships')
             .select('id')
@@ -134,7 +119,6 @@ router.post('/request/:userId', async (req, res) => {
         if (friendshipError) return res.status(500).json({ error: 'Database query failed' });
         if (existingFriendship) return res.status(409).json({ error: 'Already friends' });
 
-        // Check friend_requests
         const { data: existingRequests, error: reqError } = await supabase
             .from('friend_requests')
             .select('id, from_user_id, to_user_id, status')
@@ -146,15 +130,12 @@ router.post('/request/:userId', async (req, res) => {
         if (existingRequests && existingRequests.length > 0) {
             const existingReq = existingRequests[0];
             if (existingReq.from_user_id === targetId) {
-                // If the other person already has a pending request to us, call the acceptRequest helper instead of inserting
                 return await acceptRequest(existingReq.id, req.user.id, targetId, res);
-            } else {
-                return res.status(409).json({ error: 'Friend request already sent' });
             }
+            return res.status(409).json({ error: 'Friend request already sent' });
         }
 
-        // Insert new friend request
-        const { data: newRequest, error: insertError } = await supabase
+        const { data: request, error: insertError } = await supabase
             .from('friend_requests')
             .insert({
                 from_user_id: req.user.id,
@@ -164,9 +145,42 @@ router.post('/request/:userId', async (req, res) => {
             .select()
             .single();
 
-        if (insertError) return res.status(500).json({ error: 'Failed to send friend request' });
+        if (insertError) {
+            console.error('friend_requests insert error:', JSON.stringify(insertError));
+            // 23505 = unique_violation — request already exists
+            if (insertError.code === '23505') {
+                return res.status(409).json({ error: 'Friend request already sent' });
+            }
+            return res.status(500).json({ error: 'Failed to send friend request', detail: insertError.message, code: insertError.code });
+        }
 
-        res.json(newRequest);
+        try {
+            const { data: senderInfo } = await supabase
+                .from('users')
+                .select('id, username, avatar_url, star_count')
+                .eq('id', req.user.id)
+                .single();
+
+            const activeTarget = getActiveUser(targetId);
+            if (activeTarget && _io) {
+                activeTarget.socketIds.forEach(sid => {
+                    const targetSocket = _io.sockets.sockets.get(sid);
+                    if (targetSocket) {
+                        targetSocket.emit('friend:request', {
+                            request: {
+                                id: request.id,
+                                created_at: request.created_at,
+                                from_user: senderInfo,
+                            }
+                        });
+                    }
+                });
+            }
+        } catch (emitErr) {
+            console.error('Failed to emit friend:request', emitErr);
+        }
+
+        res.json(request);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }
@@ -204,7 +218,8 @@ router.post('/decline/:requestId', async (req, res) => {
             .from('friend_requests')
             .update({ status: 'declined' })
             .eq('id', requestId)
-            .eq('to_user_id', req.user.id);
+            .eq('to_user_id', req.user.id)
+            .eq('status', 'pending');
 
         if (error) return res.status(500).json({ error: 'Failed to decline request' });
 
@@ -277,7 +292,6 @@ router.get('/check/:userId', async (req, res) => {
             .maybeSingle();
 
         if (friendError && friendError.code !== 'PGRST116') {
-            // PGRST116 is 0 rows returned
             console.error(friendError);
         }
 
@@ -301,4 +315,4 @@ router.get('/check/:userId', async (req, res) => {
     }
 });
 
-module.exports = router;
+module.exports = (io) => { _io = io; return router; };

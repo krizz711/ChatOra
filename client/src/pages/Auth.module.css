@@ -82,6 +82,11 @@
   gap: 10px;
 }
 
+.twoCol input[type="number"] {
+  width: 100%;
+  min-width: 0;
+}
+
 .field label {
   font-size: 11px;
   font-weight: 700;

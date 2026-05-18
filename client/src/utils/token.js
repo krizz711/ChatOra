@@ -1,6 +1,6 @@
 export const getStoredToken = () => {
   try {
-    return sessionStorage.getItem('token') || localStorage.getItem('token');
+    return localStorage.getItem('token') || sessionStorage.getItem('token');
   } catch {
     return null;
   }
@@ -8,14 +8,14 @@ export const getStoredToken = () => {
 
 export const setStoredToken = (token) => {
   try {
-    sessionStorage.setItem('token', token);
-    localStorage.removeItem('token');
-  } catch {}
+    localStorage.setItem('token', token);
+    sessionStorage.removeItem('token');
+  } catch { }
 };
 
 export const clearStoredToken = () => {
   try {
     sessionStorage.removeItem('token');
     localStorage.removeItem('token');
-  } catch {}
+  } catch { }
 };

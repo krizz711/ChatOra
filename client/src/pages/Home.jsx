@@ -52,18 +52,21 @@ export default function Home() {
 
     // Get online users
     socket.emit('users:online');
-    socket.on('users:list', async (users) => {
+    const handleUsersList = async (users) => {
       const others = users.filter(u => u.id !== user.id);
       const withStats = await applyStarStats(others);
       setOnlineUsers(withStats);
-    });
-    socket.on('user:online', () => socket.emit('users:online'));
-    socket.on('user:offline', () => socket.emit('users:online'));
+    };
+    const handleUserOnline = () => socket.emit('users:online');
+    const handleUserOffline = () => socket.emit('users:online');
+    socket.on('users:list', handleUsersList);
+    socket.on('user:online', handleUserOnline);
+    socket.on('user:offline', handleUserOffline);
 
     return () => {
-      socket.off('users:list');
-      socket.off('user:online');
-      socket.off('user:offline');
+      socket.off('users:list', handleUsersList);
+      socket.off('user:online', handleUserOnline);
+      socket.off('user:offline', handleUserOffline);
     };
   }, [user.id]);
 

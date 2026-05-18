@@ -1,22 +1,60 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSocket, onSocketReset, offSocketReset } from '../socket';
+import { generateKeyPair, deriveSharedKey, encryptMessage, decryptMessage } from '../utils/encryption';
 
 const MAX_MESSAGES = 200;
 
 export const usePrivateChat = (currentUserId) => {
   const [conversations, setConversations] = useState({}); // { userId: [messages] }
   const [activeChat, setActiveChat] = useState(null);
+  const myKeyPair = useRef(null);
+  const sharedKeys = useRef({}); // { [userId]: sharedKeyB64 }
+
+  useEffect(() => {
+    myKeyPair.current = generateKeyPair();
+  }, []);
 
   useEffect(() => {
     let currentSocket = getSocket();
     if (!currentSocket) return;
 
     const subscribe = (socket) => {
+      // Key exchange handler: derive shared keys and respond with our public key
+      const onKeyExchange = ({ fromUserId, publicKey }) => {
+        if (!myKeyPair.current) return;
+        if (sharedKeys.current[fromUserId]) return; // already have shared key
+        try {
+          const shared = deriveSharedKey(myKeyPair.current.secretKey, publicKey);
+          sharedKeys.current[fromUserId] = shared;
+          const sock = getSocket();
+          if (sock) sock.emit('key:exchange', { toUserId: fromUserId, publicKey: myKeyPair.current.publicKey });
+        } catch (err) {
+          console.error('key exchange error', err);
+        }
+      };
+
+      socket.on('key:exchange', onKeyExchange);
+
       const onPrivateMessage = (msg) => {
-        const key = msg.sender.id === currentUserId ? msg.toUserId : msg.sender.id;
+        // Decrypt if needed
+        let displayMsg = msg;
+        try {
+          if (msg.encrypted && msg.ciphertext && msg.nonce) {
+            const senderId = msg.sender?.id;
+            const sharedKey = sharedKeys.current[senderId === currentUserId ? msg.toUserId : senderId];
+            if (sharedKey) {
+              const plaintext = decryptMessage(msg.ciphertext, msg.nonce, sharedKey);
+              displayMsg = { ...msg, text: plaintext || '[encrypted]', encrypted: false };
+            }
+          }
+        } catch (err) {
+          console.error('decrypt error', err);
+        }
+
+        const key = displayMsg.sender.id === currentUserId ? displayMsg.toUserId : displayMsg.sender.id;
         setConversations(prev => {
           const existing = prev[key] || [];
-          const updated = [...existing, msg].slice(-MAX_MESSAGES);
+          const updated = [...existing, displayMsg].slice(-MAX_MESSAGES);
           return { ...prev, [key]: updated };
         });
       };
@@ -35,6 +73,7 @@ export const usePrivateChat = (currentUserId) => {
       return () => {
         socket.off('private:receive', onPrivateMessage);
         socket.off('private:history', onPrivateHistory);
+        socket.off('key:exchange', onKeyExchange);
       };
     };
 
@@ -56,7 +95,17 @@ export const usePrivateChat = (currentUserId) => {
   const sendPrivateMessage = useCallback((toUserId, text) => {
     const socket = getSocket();
     if (!socket || !text.trim()) return;
-    socket.emit('private:send', { toUserId, text: text.trim() });
+    const sharedKey = sharedKeys.current[toUserId];
+    if (sharedKey) {
+      try {
+        const { ciphertext, nonce } = encryptMessage(text.trim(), sharedKey);
+        socket.emit('private:send', { toUserId, ciphertext, nonce, encrypted: true });
+      } catch (err) {
+        console.error('encrypt error', err);
+      }
+    } else {
+      socket.emit('private:send', { toUserId, text: text.trim() });
+    }
   }, []);
 
   const sendPrivateFile = useCallback((toUserId, fileUrl, fileName, fileType) => {
@@ -68,7 +117,12 @@ export const usePrivateChat = (currentUserId) => {
   const openChat = (userId) => {
     setActiveChat(userId);
     const socket = getSocket();
-    if (socket && userId) socket.emit('private:history', { withUserId: userId });
+    if (socket && userId) {
+      socket.emit('private:history', { withUserId: userId });
+      if (myKeyPair.current) {
+        socket.emit('key:exchange', { toUserId: userId, publicKey: myKeyPair.current.publicKey });
+      }
+    }
   };
   const closeChat = () => setActiveChat(null);
   const getMessages = (userId) => conversations[userId] || [];

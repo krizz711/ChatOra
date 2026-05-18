@@ -5,10 +5,15 @@ const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-  ],
+    {
+      urls: import.meta.env.VITE_TURN_URL,
+      username: import.meta.env.VITE_TURN_USER,
+      credential: import.meta.env.VITE_TURN_CRED,
+    },
+  ].filter(s => s.urls && s.urls !== 'undefined'),
 };
 
-export default function useCall() {
+export default function useCall(user) {
   const [callState, setCallState] = useState('idle');
   const [callType, setCallType] = useState('voice');
   const [remoteUser, setRemoteUser] = useState(null);
@@ -31,7 +36,7 @@ export default function useCall() {
 
     try {
       if (pcRef.current) {
-        try { pcRef.current.close(); } catch (e) {}
+        try { pcRef.current.close(); } catch (e) { }
         pcRef.current = null;
       }
     } catch (err) {
@@ -76,6 +81,7 @@ export default function useCall() {
   };
 
   const startCall = async (targetUser, type = 'voice') => {
+    if (user?.isGuest || callState !== 'idle') return;
     setCallType(type);
     setRemoteUser(targetUser);
     setCallState('calling');
@@ -153,8 +159,6 @@ export default function useCall() {
   };
 
   useEffect(() => {
-    let socket = getSocket();
-
     const handleIncoming = (data) => {
       setIncomingCall(data);
       setCallState('incoming');
@@ -192,37 +196,36 @@ export default function useCall() {
       }, 3000);
     };
 
-    const bind = (s) => {
-      if (!s) return;
-      s.on('call:incoming', handleIncoming);
-      s.on('call:answered', handleAnswered);
-      s.on('call:ice', handleIce);
-      s.on('call:declined', handleDeclined);
-      s.on('call:ended', handleEnded);
+    const bind = (socket) => {
+      if (!socket) return () => { };
+      socket.on('call:incoming', handleIncoming);
+      socket.on('call:answered', handleAnswered);
+      socket.on('call:ice', handleIce);
+      socket.on('call:declined', handleDeclined);
+      socket.on('call:ended', handleEnded);
+      return () => {
+        socket.off('call:incoming', handleIncoming);
+        socket.off('call:answered', handleAnswered);
+        socket.off('call:ice', handleIce);
+        socket.off('call:declined', handleDeclined);
+        socket.off('call:ended', handleEnded);
+      };
     };
 
-    const unbind = (s) => {
-      if (!s) return;
-      s.off('call:incoming', handleIncoming);
-      s.off('call:answered', handleAnswered);
-      s.off('call:ice', handleIce);
-      s.off('call:declined', handleDeclined);
-      s.off('call:ended', handleEnded);
+    let currentSocket = getSocket();
+    let unbind = bind(currentSocket);
+
+    const handleReset = (newSocket) => {
+      unbind();
+      currentSocket = newSocket;
+      unbind = bind(newSocket);
     };
 
-    bind(socket);
-
-    const resetHandler = (newSocket) => {
-      unbind(socket);
-      socket = newSocket;
-      bind(socket);
-    };
-
-    onSocketReset(resetHandler);
+    onSocketReset(handleReset);
 
     return () => {
-      unbind(socket);
-      offSocketReset(resetHandler);
+      unbind();
+      offSocketReset(handleReset);
     };
   }, []);
 

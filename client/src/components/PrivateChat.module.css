@@ -3,8 +3,7 @@
   height: 500px;
   display: flex;
   flex-direction: column;
-  background: rgba(33, 37, 41, 0.92);
-  backdrop-filter: blur(20px);
+  background: #000000;
   border: 1px solid rgba(61, 68, 81, 0.5);
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -19,7 +18,7 @@
   justify-content: space-between;
   padding: 12px 14px;
   border-bottom: 1px solid rgba(61, 68, 81, 0.4);
-  background: rgba(33, 37, 41, 0.8);
+  background: #000000;
   transition: all 0.3s ease;
 }
 

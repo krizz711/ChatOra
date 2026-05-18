@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getSocket } from '../socket';
 import {
   fetchGroups,
   createGroup,
@@ -30,12 +31,30 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
   const [activePanel, setActivePanel] = useState('active');
   const [friends, setFriends] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
+  const [pendingOutgoing, setPendingOutgoing] = useState([]);
+  const [requestCount, setRequestCount] = useState(0);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState('all');
   const [userSort, setUserSort] = useState('popularity');
-  useEffect(() => { loadGroups(); loadFriends(); }, []);
+  useEffect(() => { loadGroups(); loadFriends(); }, [user]);
   useEffect(() => { if (activePanel === 'friends') loadFriends(); }, [activePanel]);
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const onFriendRequest = ({ request }) => {
+      setFriendRequests(prev => {
+        const exists = prev.find(r => r.id === request.id);
+        if (exists) return prev;
+        return [request, ...prev];
+      });
+      setRequestCount(prev => prev + 1);
+    };
+
+    socket.on('friend:request', onFriendRequest);
+    return () => socket.off('friend:request', onFriendRequest);
+  }, []);
 
 
   const loadGroups = async () => {
@@ -49,9 +68,10 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
     if (user?.isGuest) return;
     setFriendsLoading(true);
     try {
-      const [{ friends: f }, { requests: r }] = await Promise.all([fetchFriends(), fetchFriendRequests()]);
-      setFriends(f || []);
-      setFriendRequests(r || []);
+      const [friends, requests] = await Promise.all([fetchFriends(), fetchFriendRequests()]);
+      setFriends(friends || []);
+      setFriendRequests(requests || []);
+      setRequestCount((requests || []).length);
     } catch { }
     finally { setFriendsLoading(false); }
   };
@@ -68,6 +88,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
     try {
       await sendFriendRequest(userId);
       alert('Request sent');
+      setPendingOutgoing(prev => prev.includes(userId) ? prev : [...prev, userId]);
     } catch { }
   };
 
@@ -182,8 +203,25 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
         <button className={`${styles.tabBtn} ${activePanel === 'active' ? styles.tabActive : ''}`} onClick={() => setActivePanel('active')}>
           Active
         </button>
-        <button className={`${styles.tabBtn} ${activePanel === 'friends' ? styles.tabActive : ''}`} onClick={() => setActivePanel('friends')}>
+        <button
+          className={`${styles.tabBtn} ${activePanel === 'friends' ? styles.tabActive : ''}`}
+          onClick={() => { setActivePanel('friends'); setRequestCount(0); }}
+        >
           Friends
+          {requestCount > 0 && (
+            <span style={{
+              marginLeft: 6,
+              background: 'var(--red)',
+              color: '#fff',
+              borderRadius: '99px',
+              fontSize: 10,
+              fontWeight: 800,
+              padding: '1px 6px',
+              lineHeight: '16px',
+            }}>
+              {requestCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -282,57 +320,57 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
               {!friendsLoading && friends.length === 0 && (
                 <div className={styles.emptyState}>No friends yet. Find people in the Active tab and add them.</div>
               )}
-              {!friendsLoading && friends.map(friend => (
-                <div key={friend.id} className={styles.userBtn} onClick={() => onUserClick(friend)} role="button" tabIndex={0} title={`Message ${friend.username}`}>
-                  <div className="avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
-                    {friend.avatar_url
-                      ? <img src={friend.avatar_url} alt={friend.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                      : friend.username?.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className={styles.userContent}>
-                    <span className={styles.userName}>{friend.username}</span>
-                    <div className={styles.userMeta}>
-                      <button
-                        className={styles.profileSmall}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCallUser?.(friend, 'voice');
-                        }}
-                        title={`Call ${friend.username}`}
-                      >
-                        Call
-                      </button>
-                      <button
-                        className={styles.profileSmall}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onUserClick(friend);
-                        }}
-                        title={`Message ${friend.username}`}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                        </svg>
-                      </button>
-                      <button
-                        className={styles.profileSmall}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFriendRequestAction(unfriend, friend.id);
-                        }}
-                        title={`Unfriend ${friend.username}`}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                          <path d="M18 6 6 18M6 6l12 12" />
-                        </svg>
-                      </button>
+              {!friendsLoading && friends.map(friend => {
+                const isOnline = onlineUsers?.some(u => u.id === friend.id);
+                return (
+                  <div key={friend.id} className={styles.userBtn} onClick={() => onUserClick(friend)} role="button" tabIndex={0} title={`Message ${friend.username}`}>
+                    <div className="avatar" style={{ position: 'relative', width: 28, height: 28, fontSize: 11 }}>
+                      {friend.avatar_url
+                        ? <img src={friend.avatar_url} alt={friend.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        : friend.username?.slice(0, 2).toUpperCase()}
+                      {isOnline && (
+                        <span style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 0,
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: 'var(--green)',
+                          border: '1.5px solid var(--surface)',
+                        }} />
+                      )}
+                    </div>
+                    <div className={styles.userContent}>
+                      <span className={styles.userName}>{friend.username}</span>
+                      <div className={styles.userMeta}>
+                        {isOnline && (
+                          <button
+                            className={styles.profileSmall}
+                            onClick={e => { e.stopPropagation(); onCallUser?.(friend, 'voice'); }}
+                            disabled={!friend.calls_enabled}
+                            title={friend.calls_enabled ? `Call ${friend.username}` : 'Calls disabled'}
+                          >
+                            Call
+                          </button>
+                        )}
+                        <button
+                          className={styles.profileSmall}
+                          onClick={e => { e.stopPropagation(); onUserClick(friend); }}
+                        >
+                          Message
+                        </button>
+                        <button
+                          className={styles.profileSmall}
+                          onClick={e => { e.stopPropagation(); unfriend(friend.friendship_id).then(loadFriends); }}
+                        >
+                          Unfriend
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
@@ -341,6 +379,25 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
         {activePanel === 'active' && (
           <div className={styles.section}>
             <div className={styles.sectionLabel}>Active Users - {onlineUsers?.length || 0}</div>
+            <a
+              href="https://go.nordvpn.net/YOUR_AFFILIATE_LINK"
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              style={{
+                display: 'block',
+                padding: '10px 12px',
+                marginBottom: 8,
+                borderRadius: 10,
+                border: '1px solid var(--border)',
+                background: 'var(--surface2)',
+                fontSize: 12,
+                color: 'var(--text2)',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text3)', display: 'block', marginBottom: 2 }}>Sponsored</span>
+              Stay private while chatting — NordVPN
+            </a>
             <div className={styles.userFilters}>
               <input
                 value={userSearch}
@@ -385,15 +442,36 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                   <span className={styles.userName}>{u.username}</span>
                   <div className={styles.userMeta}>
                     {u.id !== user?.id && (
-                      <button
-                        className={styles.profileSmall}
-                        type="button"
-                        onClick={(e) => handleSendFriendRequest(u.id, e)}
-                        disabled={u.id?.startsWith('guest_')}
-                        title={u.id?.startsWith('guest_') ? 'Guest users cannot receive friend requests' : `Send friend request to ${u.username}`}
-                      >
-                        Add friend
-                      </button>
+                      friends.some(f => f.id === u.id) ? (
+                        <button
+                          className={styles.profileSmall}
+                          type="button"
+                          disabled
+                          style={{ color: 'var(--green)', opacity: 1 }}
+                          title="Already friends"
+                        >
+                          Friend
+                        </button>
+                      ) : pendingOutgoing.includes(u.id) ? (
+                        <button
+                          className={styles.profileSmall}
+                          type="button"
+                          disabled
+                          title="Friend request pending"
+                        >
+                          Pending
+                        </button>
+                      ) : (
+                        <button
+                          className={styles.profileSmall}
+                          type="button"
+                          onClick={(e) => handleSendFriendRequest(u.id, e)}
+                          disabled={u.id?.startsWith('guest_')}
+                          title={u.id?.startsWith('guest_') ? 'Guest users cannot receive friend requests' : `Send friend request to ${u.username}`}
+                        >
+                          Add friend
+                        </button>
+                      )
                     )}
                     {u.id !== user?.id && (
                       <button
