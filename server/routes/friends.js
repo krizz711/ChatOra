@@ -10,6 +10,11 @@ router.use(authMiddleware);
 
 const friendshipKey = (a, b) => a < b ? [a, b] : [b, a];
 
+// UUID format validator
+const isValidId = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+// Sanitize IDs used in .or() filter strings to prevent injection
+const safeId = (id) => String(id).replace(/[^a-zA-Z0-9_-]/g, '');
+
 const acceptRequest = async (requestId, acceptorId, requesterId, res) => {
     const { error: updateError } = await supabase
         .from('friend_requests')
@@ -45,7 +50,7 @@ router.get('/', async (req, res) => {
         user_a_id,
         user_b_id
       `)
-            .or(`user_a_id.eq.${req.user.id},user_b_id.eq.${req.user.id}`);
+            .or(`user_a_id.eq.${safeId(req.user.id)},user_b_id.eq.${safeId(req.user.id)}`);
 
         if (error) {
             console.error('friendships query error:', JSON.stringify(error));
@@ -67,6 +72,49 @@ router.get('/', async (req, res) => {
 
         const friendsList = friendships.map(f => {
             const friendId = f.user_a_id === req.user.id ? f.user_b_id : f.user_a_id;
+            return {
+                ...(userMap[friendId] || { id: friendId }),
+                friendship_id: f.id,
+                friends_since: f.friends_since,
+            };
+        });
+
+        res.json(friendsList);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// GET /list/:userId => Query friendships table joining users for specific user context
+router.get('/list/:userId', async (req, res) => {
+    try {
+        const targetId = req.params.userId;
+        if (!isValidId(targetId)) return res.status(400).json({ error: 'Invalid user ID format' });
+        const { data: friendships, error } = await supabase
+            .from('friendships')
+            .select(`id, friends_since, user_a_id, user_b_id`)
+            .or(`user_a_id.eq.${safeId(targetId)},user_b_id.eq.${safeId(targetId)}`);
+
+        if (error) {
+            console.error('friendships query error:', JSON.stringify(error));
+            return res.status(500).json({ error: 'Database query failed', detail: error.message });
+        }
+
+        // Fetch friend user data
+        const friendIds = friendships.map(f =>
+            f.user_a_id === targetId ? f.user_b_id : f.user_a_id
+        );
+
+        const { data: friendUsers } = friendIds.length ? await supabase
+            .from('users')
+            .select('id, username, avatar_url, bio, star_count, country, state, gender, age')
+            .in('id', friendIds) : { data: [] };
+
+        const userMap = {};
+        (friendUsers || []).forEach(u => { userMap[u.id] = u; });
+
+        const friendsList = friendships.map(f => {
+            const friendId = f.user_a_id === targetId ? f.user_b_id : f.user_a_id;
             return {
                 ...(userMap[friendId] || { id: friendId }),
                 friendship_id: f.id,
@@ -105,6 +153,7 @@ router.post('/request/:userId', async (req, res) => {
     const targetId = req.params.userId;
     if (req.user.id === targetId) return res.status(400).json({ error: 'Cannot friend yourself' });
     if (targetId.startsWith('guest_')) return res.status(403).json({ error: 'Cannot friend guests' });
+    if (!isValidId(targetId)) return res.status(400).json({ error: 'Invalid user ID format' });
 
     const [user_a_id, user_b_id] = friendshipKey(req.user.id, targetId);
 
@@ -123,7 +172,7 @@ router.post('/request/:userId', async (req, res) => {
             .from('friend_requests')
             .select('id, from_user_id, to_user_id, status')
             .eq('status', 'pending')
-            .or(`and(from_user_id.eq.${req.user.id},to_user_id.eq.${targetId}),and(from_user_id.eq.${targetId},to_user_id.eq.${req.user.id})`);
+            .or(`and(from_user_id.eq.${safeId(req.user.id)},to_user_id.eq.${safeId(targetId)}),and(from_user_id.eq.${safeId(targetId)},to_user_id.eq.${safeId(req.user.id)})`);
 
         if (reqError) return res.status(500).json({ error: 'Database query failed' });
 
@@ -285,7 +334,8 @@ router.put('/settings', async (req, res) => {
 // GET /check/:userId
 router.get('/check/:userId', async (req, res) => {
     const targetId = req.params.userId;
-    const [user_a_id, user_b_id] = friendshipKey(req.user.id, targetId);
+    if (!isValidId(targetId)) return res.status(400).json({ error: 'Invalid user ID format' });
+    const [user_a_id, user_b_id] = friendshipKey(safeId(req.user.id), safeId(targetId));
 
     try {
         const { data: friendship, error: friendError } = await supabase
@@ -307,7 +357,7 @@ router.get('/check/:userId', async (req, res) => {
             .from('friend_requests')
             .select('*')
             .eq('status', 'pending')
-            .or(`and(from_user_id.eq.${req.user.id},to_user_id.eq.${targetId}),and(from_user_id.eq.${targetId},to_user_id.eq.${req.user.id})`);
+            .or(`and(from_user_id.eq.${safeId(req.user.id)},to_user_id.eq.${safeId(targetId)}),and(from_user_id.eq.${safeId(targetId)},to_user_id.eq.${safeId(req.user.id)})`);
 
         if (reqError) return res.status(500).json({ error: 'Database error' });
 

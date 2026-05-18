@@ -14,13 +14,20 @@ const { authMiddleware } = require('./middleware/authMiddleware');
 
 const app = express();
 const httpServer = createServer(app);
-const allowedOrigin = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map(o => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
 const normalizeOrigin = (value) => (value || '').replace(/\/$/, '');
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true; // same-origin or server-to-server
+  return allowedOrigins.includes(normalizeOrigin(origin));
+};
 
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      if (!origin || normalizeOrigin(origin) === allowedOrigin) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
@@ -36,7 +43,7 @@ const io = new Server(httpServer, {
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || normalizeOrigin(origin) === allowedOrigin) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -49,7 +56,22 @@ app.use((req, res, next) => {
   if (req.originalUrl === '/api/billing/webhook') return next();
   return jsonParser(req, res, next);
 });
-app.use(helmet({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: false }));
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com', 'https://*.cloudinary.com'],
+      connectSrc: ["'self'", ...allowedOrigins, 'wss:', 'ws:'],
+      mediaSrc: ["'self'", 'https://res.cloudinary.com'],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+}));
 app.use(cookieParser());
 app.use(passport.initialize());
 

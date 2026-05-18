@@ -1,12 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Star, Pencil, Mail, User, MapPin, Calendar, ArrowLeft, Upload, Globe, Users } from 'lucide-react';
+import { ArrowLeft, Upload } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile, uploadAvatar, updateCallSettings } from '../utils/api';
+import { updateProfile, uploadAvatar } from '../utils/api';
 import { getStoredToken } from '../utils/token';
 import axios from 'axios';
 import styles from './Profile.module.css';
+import { getCode } from 'country-list';
+import 'flag-icons/css/flag-icons.min.css';
+import { Country, State } from 'country-state-city';
+
+const getCountryCode = (country) => {
+  if (!country) return null;
+  let code = country.length === 2 ? country.toUpperCase() : getCode(country);
+  return code ? code.toLowerCase() : null;
+};
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
@@ -14,6 +23,8 @@ export default function Profile() {
   const [searchParams] = useSearchParams();
   const [viewingUser, setViewingUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [friendsList, setFriendsList] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     username: user?.username || '',
     bio: user?.bio || '',
@@ -23,9 +34,6 @@ export default function Profile() {
     age: user?.age || '',
   });
   const [saving, setSaving] = useState(false);
-  const [callsEnabled, setCallsEnabled] = useState(user?.calls_enabled ?? true);
-  const [notifSound, setNotifSound] = useState(user?.notification_sound ?? true);
-  const [settingsSaving, setSettingsSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
@@ -43,11 +51,6 @@ export default function Profile() {
       gender: user?.gender || 'other',
       age: user?.age || '',
     });
-  }, [user]);
-
-  useEffect(() => {
-    setCallsEnabled(user?.calls_enabled ?? true);
-    setNotifSound(user?.notification_sound ?? true);
   }, [user]);
 
   // Check if viewing another user
@@ -72,159 +75,47 @@ export default function Profile() {
     setLoading(false);
   }, [searchParams, SERVER]);
 
-  // Guest
-  if (user?.isGuest) {
-    return (
-      <div className={styles.page}>
-        <motion.div className={styles.card}
-          initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
-          <button className={styles.backBtn} onClick={() => navigate('/')}>
-            <ArrowLeft size={14} /> Back to chat
-          </button>
-          <h1 className={styles.title}>Guest Session</h1>
-          <div className={styles.guestInfo}>
-            <p>You're chatting as <strong>{user.username}</strong> (guest).</p>
-            <p>Guests can't edit profiles or upload avatars.</p>
-            <p>Your session expires in 4 hours.</p>
-          </div>
-          <div className={styles.actions}>
-            <motion.button className={styles.primaryBtn}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/login')}>
-              Create a real account
-            </motion.button>
-            <button className={styles.ghostBtn} onClick={() => navigate('/')}>
-              Back to chat
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  // Fetch friends of target user
+  let target = viewingUser || user;
 
-  // Loading
-  if (loading) {
-    return (
-      <div className={styles.page}>
-        <motion.div className={styles.card}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <div className={styles.loadingState}>Loading profile...</div>
-        </motion.div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (target?.id) {
+      const token = getStoredToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      axios.get(`${SERVER}/api/friends/list/${target.id}`, { headers })
+        .then(r => setFriendsList(r.data))
+        .catch(err => setFriendsList([]));
+    } else {
+      setFriendsList([]);
+    }
+  }, [target?.id, SERVER]);
 
-  // Viewing another user
-  if (viewingUser) {
-    return (
-      <div className={styles.page}>
-        <motion.div className={styles.card}
-          initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
-          <button className={styles.backBtn} onClick={() => navigate(-1)}>
-            <ArrowLeft size={14} /> Back
-          </button>
-
-          <h1 className={styles.title}>{viewingUser.username}'s Profile</h1>
-
-          {/* Avatar + Identity */}
-          <div className={styles.profileHeader}>
-            <div className={styles.avatarWrap}>
-              <div className={styles.avatarBig}>
-                {viewingUser.avatar_url
-                  ? <img src={viewingUser.avatar_url} alt={viewingUser.username} />
-                  : initials(viewingUser.username)}
-              </div>
-            </div>
-            <div className={styles.identity}>
-              <h2>{viewingUser.username}</h2>
-              <p className={styles.bio}>{viewingUser.bio || 'No bio yet.'}</p>
-              <div className={styles.starBadge}>
-                <Star size={14} /> {viewingUser.star_count || 0}
-              </div>
-            </div>
-          </div>
-
-          {/* Info Grid */}
-          <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <Calendar size={14} />
-              <div>
-                <span className={styles.infoLabel}>Member since</span>
-                <span className={styles.infoValue}>{new Date(viewingUser.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-            <div className={styles.infoItem}>
-              <Globe size={14} />
-              <div>
-                <span className={styles.infoLabel}>Country</span>
-                <span className={styles.infoValue}>{viewingUser.country || 'Not provided'}</span>
-              </div>
-            </div>
-            <div className={styles.infoItem}>
-              <MapPin size={14} />
-              <div>
-                <span className={styles.infoLabel}>State / Region</span>
-                <span className={styles.infoValue}>{viewingUser.state || 'Not provided'}</span>
-              </div>
-            </div>
-            <div className={styles.infoItem}>
-              <Users size={14} />
-              <div>
-                <span className={styles.infoLabel}>Gender</span>
-                <span className={styles.infoValue}>{viewingUser.gender || 'other'}</span>
-              </div>
-            </div>
-            <div className={styles.infoItem}>
-              <User size={14} />
-              <div>
-                <span className={styles.infoLabel}>Age</span>
-                <span className={styles.infoValue}>{viewingUser.age || 'Not provided'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.actions}>
-            <motion.button className={styles.primaryBtn}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/')}>
-              Go back to chat
-            </motion.button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  // --- Own Profile ---
   const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
-  const save = async () => {
+  const handleCountryChange = e => {
+    setForm(p => ({ ...p, country: e.target.value, state: '' }));
+  };
+
+  const selectedCountryObj = Country.getAllCountries().find(c => c.name === form.country);
+  const availableStates = selectedCountryObj ? State.getStatesOfCountry(selectedCountryObj.isoCode) : [];
+
+  const saveProfile = async () => {
     setSaving(true); setMsg(''); setError('');
     try {
       const data = await updateProfile(form);
       updateUser(data.user);
       setMsg('Profile updated!');
+      setIsEditing(false);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to update');
     } finally { setSaving(false); }
-  };
-
-  const saveSettings = async () => {
-    setSettingsSaving(true);
-    try {
-      await updateCallSettings({ calls_enabled: callsEnabled, notification_sound: notifSound });
-      setMsg('Settings saved!');
-    } catch {
-      setError('Failed to save settings');
-    } finally { setSettingsSaving(false); }
   };
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setMsg(''); setError('');
     try {
       const data = await uploadAvatar(file);
       updateUser(data.user);
@@ -233,163 +124,213 @@ export default function Profile() {
     finally { setUploading(false); fileRef.current.value = ''; }
   };
 
+  // Guest view
+  if (user?.isGuest && !viewingUser) {
+    return (
+      <div className={styles.page}>
+        <motion.div className={styles.card} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
+          <button className={styles.backBtn} onClick={() => navigate('/')}>
+            <ArrowLeft size={14} /> Back to chat
+          </button>
+          <div className={styles.sectionTitle} style={{ marginTop: 16 }}>Guest Session</div>
+          <div>
+            <p>You're chatting as <strong>{user.username}</strong> (guest).</p>
+            <p>Guests can't edit profiles or upload avatars. Your session expires in 4 hours.</p>
+          </div>
+          <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => navigate('/login')}>
+            Create a real account
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (loading) return <div className={styles.page}><div className={styles.card}>Loading profile...</div></div>;
+  if (!target) return <div className={styles.page}><div className={styles.card}>User not found.</div></div>;
+
+  const isMe = !viewingUser;
+
   return (
     <div className={styles.page}>
       <motion.div className={styles.card}
         initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
 
-        <button className={styles.backBtn} onClick={() => navigate('/')}>
-          <ArrowLeft size={14} /> Back to chat
+        <button className={styles.backBtn} onClick={() => navigate(-1)}>
+          <ArrowLeft size={14} /> Back
         </button>
-
-        <h1 className={styles.title}>My Profile</h1>
 
         {msg && <div className={styles.successMsg}>{msg}</div>}
         {error && <div className={styles.errorMsg}>{error}</div>}
 
-        {/* Avatar + Identity */}
+        {/* PROFILE HEADER */}
         <div className={styles.profileHeader}>
-          <div className={styles.avatarWrap}>
+          <div className={styles.avatarCol}>
             <div className={styles.avatarBig}>
-              {user?.avatar_url
-                ? <img src={user.avatar_url} alt={user.username} />
-                : initials(user?.username)}
+              {target.avatar_url
+                ? <img src={target.avatar_url} alt={target.username} />
+                : initials(target.username)}
             </div>
-            <span className={styles.statusDot} />
+            {isMe && (
+              <>
+                <input type="file" ref={fileRef} onChange={handleAvatarChange} accept="image/*" style={{ display: 'none' }} />
+                <button
+                  className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`}
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                >
+                  <Upload size={12} /> {uploading ? '...' : 'Edit PFP'}
+                </button>
+              </>
+            )}
           </div>
-          <div className={styles.identity}>
-            <h2>{user?.username}</h2>
-            <p className={styles.bio}>{user?.bio || 'Set your bio to help others know you better.'}</p>
-            <div className={styles.starBadge}>
-              <Star size={14} /> {user?.star_count || 0}
+          <div className={styles.infoCol}>
+            <div className={styles.nameRow}>
+              {!isEditing && getCountryCode(target.country) && (
+                <span
+                  className={`fi fi-${getCountryCode(target.country)} ${styles.countryFlagIcon}`}
+                  title={target.country}
+                ></span>
+              )}
+              <h1 className={styles.userName}>
+                {isEditing ? (
+                  <input name="username" value={form.username} onChange={handle} className={styles.detailInput} style={{ fontSize: 20, padding: '4px 8px' }} />
+                ) : target.username}
+              </h1>
             </div>
+
+            <div className={styles.badgesRow}>
+              {target.role === 'admin' && <div className={styles.badge} style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>Admin</div>}
+              {target.star_count >= 10 && <div className={styles.badge} style={{ borderColor: 'var(--yellow)', color: 'var(--yellow)' }}>Popular</div>}
+            </div>
+
+            {isMe && (
+              <div className={styles.headerActions}>
+                {isEditing ? (
+                  <button className={`${styles.btn} ${styles.btnSm} ${styles.btnPrimary}`} onClick={saveProfile} disabled={saving}>
+                    {saving ? 'Saving...' : 'Save Profile'}
+                  </button>
+                ) : (
+                  <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`} onClick={() => setIsEditing(true)}>
+                    Edit Profile
+                  </button>
+                )}
+                <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`}>
+                  Change Flair
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Change Avatar */}
-        <input type="file" ref={fileRef} onChange={handleAvatarChange}
-          accept="image/*" style={{ display: 'none' }} />
-        <motion.button className={styles.avatarBtn}
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          onClick={() => fileRef.current?.click()} disabled={uploading}>
-          <Upload size={16} />
-          {uploading ? 'Uploading...' : 'Change Avatar'}
-        </motion.button>
-        <p className={styles.avatarHint}>JPG, PNG, GIF up to 10MB</p>
-
-        {/* Stats */}
-        <div className={styles.statsGrid}>
+        {/* STATS SECTION */}
+        <div className={styles.statsSection}>
           <div className={styles.statItem}>
-            <span className={styles.statValue}>{user?.star_count || 0}</span>
+            <span className={styles.statValue}>{new Date(target.created_at).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
+            <span className={styles.statLabel}>Member Since</span>
+          </div>
+          <div className={styles.statItem}>
+            <span className={styles.statValue}>{target.star_count || 0}</span>
             <span className={styles.statLabel}>Stars</span>
           </div>
           <div className={styles.statItem}>
-            <span className={styles.statValue}>{user?.country ? '✓' : '—'}</span>
-            <span className={styles.statLabel}>Location</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>{user?.gender === 'female' ? '♀' : user?.gender === 'male' ? '♂' : '⚪'}</span>
-            <span className={styles.statLabel}>Gender</span>
-          </div>
-          <div className={styles.statItem}>
-            <span className={styles.statValue}>{user?.age || '—'}</span>
-            <span className={styles.statLabel}>Age</span>
+            <span className={styles.statValue}>{friendsList.length}</span>
+            <span className={styles.statLabel}>Friends</span>
           </div>
         </div>
 
-        {/* Edit Form */}
-        <form className={styles.formSection} onSubmit={(e) => { e.preventDefault(); save(); }}>
-          <div className={styles.inputWrap}>
-            <input name="username" value={form.username} onChange={handle} placeholder="Username" />
-            <Pencil className={styles.inputIcon} size={14} />
-          </div>
-          <div className={styles.inputWrap}>
-            <input value={user?.email} disabled className={styles.disabled} />
-            <Mail className={styles.inputIcon} size={14} />
-          </div>
-          <div className={styles.inputWrap}>
-            <textarea name="bio" value={form.bio} onChange={handle}
-              placeholder="Tell people about yourself..." rows={3} />
-          </div>
-          <div className={styles.inputWrap}>
-            <input name="country" value={form.country} onChange={handle} placeholder="Country" />
-            <Globe className={styles.inputIcon} size={14} />
-          </div>
-          <div className={styles.twoCol}>
-            <div className={styles.inputWrap}>
-              <input name="state" value={form.state} onChange={handle} placeholder="State / Region" />
-              <MapPin className={styles.inputIcon} size={14} />
-            </div>
-            <div className={styles.inputWrap}>
-              <input name="age" type="number" min="13" max="120" value={form.age} onChange={handle} placeholder="Age" />
-            </div>
-          </div>
-          <div className={styles.inputWrap}>
-            <select name="gender" value={form.gender} onChange={handle}>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div style={{ marginTop: 8, marginBottom: 2, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1.1px', color: 'var(--text3)' }}>
-            Settings
-          </div>
-          <div className={styles.inputWrap} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }} htmlFor="allow-calls">
-              Allow incoming calls
-            </label>
-            <input
-              id="allow-calls"
-              type="checkbox"
-              checked={callsEnabled}
-              onChange={(e) => setCallsEnabled(e.target.checked)}
-              style={{ width: 18, height: 18, accentColor: 'var(--accent)' }}
+        {/* BIO SECTION */}
+        <div className={styles.bioSection}>
+          <div className={styles.sectionTitle}>About Me</div>
+          {isEditing ? (
+            <textarea
+              name="bio"
+              className={styles.bioInput}
+              value={form.bio}
+              onChange={handle}
+              placeholder="Tell people about yourself..."
             />
-          </div>
-          <div className={styles.inputWrap} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }} htmlFor="notif-sound">
-              Notification sounds
-            </label>
-            <input
-              id="notif-sound"
-              type="checkbox"
-              checked={notifSound}
-              onChange={(e) => setNotifSound(e.target.checked)}
-              style={{ width: 18, height: 18, accentColor: 'var(--accent)' }}
-            />
-          </div>
-          <motion.button className={styles.primaryBtn}
-            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            onClick={saveSettings} disabled={settingsSaving}>
-            {settingsSaving ? 'Saving...' : 'Save Settings'}
-          </motion.button>
-
-          {/* Save */}
-          <motion.button type="submit" className={styles.primaryBtn}
-            whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-            disabled={saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
-          </motion.button>
-        </form>
-
-        {/* Info Footer */}
-        <div className={styles.infoGrid}>
-          <div className={styles.infoItem}>
-            <Calendar size={14} />
-            <div>
-              <span className={styles.infoLabel}>Member since</span>
-              <span className={styles.infoValue}>{new Date(user?.created_at).toLocaleDateString()}</span>
+          ) : (
+            <div className={styles.bioCard}>
+              {target.bio || 'This user has not set a bio yet.'}
             </div>
+          )}
+        </div>
+
+        {/* DETAILS SECTION */}
+        <div className={styles.detailsGrid}>
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Location</span>
+            {isEditing ? (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select name="country" value={form.country} onChange={handleCountryChange} className={styles.detailInput}>
+                  <option value="">Select Country</option>
+                  {Country.getAllCountries().map(c => (
+                    <option key={c.isoCode} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
+                <select name="state" value={form.state} onChange={handle} className={styles.detailInput} disabled={!availableStates.length && !!form.country}>
+                  <option value="">Select State</option>
+                  {availableStates.map(s => (
+                    <option key={`${selectedCountryObj?.isoCode}-${s.isoCode}`} value={s.name}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className={styles.detailValue}>
+                {target.state || target.country ? `${target.state ? target.state + ', ' : ''}${target.country || ''}` : 'Not provided'}
+              </div>
+            )}
           </div>
-          <div className={styles.infoItem}>
-            <Mail size={14} />
-            <div>
-              <span className={styles.infoLabel}>Email</span>
-              <span className={styles.infoValue}>{user?.email}</span>
-            </div>
+
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Gender</span>
+            {isEditing ? (
+              <select name="gender" value={form.gender} onChange={handle} className={styles.detailInput}>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </select>
+            ) : (
+              <div className={styles.detailValue}>
+                {target.gender ? target.gender.charAt(0).toUpperCase() + target.gender.slice(1) : 'Not provided'}
+              </div>
+            )}
           </div>
+
+          <div className={styles.detailItem}>
+            <span className={styles.detailLabel}>Age</span>
+            {isEditing ? (
+              <input name="age" type="number" value={form.age} onChange={handle} className={styles.detailInput} />
+            ) : (
+              <div className={styles.detailValue}>
+                {target.age || 'Not provided'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* FRIENDS PREVIEW SECTION */}
+        <div className={styles.sectionTitle} style={{ marginTop: 8 }}>Friends Network</div>
+        <div className={styles.friendsPreview}>
+          <div className={styles.friendsAvatars}>
+            {friendsList.slice(0, 3).map((f, i) => (
+              <div key={i} className={styles.friendAvatar}>
+                {f.avatar_url ? <img src={f.avatar_url} alt={f.username} title={f.username} /> : <span title={f.username}>{initials(f.username)}</span>}
+              </div>
+            ))}
+            {friendsList.length > 3 && (
+              <div className={styles.friendAvatar} style={{ background: 'var(--border)', color: 'var(--text)' }}>
+                +{friendsList.length - 3}
+              </div>
+            )}
+            {friendsList.length === 0 && (
+              <div style={{ fontSize: 13, color: 'var(--text2)', marginLeft: 8 }}>No friends yet.</div>
+            )}
+          </div>
+          <button className={styles.viewAllBtn}>
+            View All <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
+          </button>
         </div>
 
       </motion.div>

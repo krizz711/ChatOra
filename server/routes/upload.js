@@ -1,9 +1,19 @@
 const router = require('express').Router();
+const rateLimit = require('express-rate-limit');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { upload } = require('../config/cloudinary');
 
+// Strict upload rate limit: 5 uploads per minute per IP
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: 'Too many uploads. Please wait before uploading again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Upload file/image in chat
-router.post('/', authMiddleware, upload.single('file'), async (req, res) => {
+router.post('/', authMiddleware, uploadLimiter, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 

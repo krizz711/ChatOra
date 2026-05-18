@@ -160,43 +160,106 @@
   }
 }
 
-/* ═══ TABS ═══ */
-.tabs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin: 0 16px 12px;
-  padding: 4px;
+/* ═══ TABS (GLASS RADIO) ═══ */
+.glassRadioGroup {
+  display: flex;
+  position: relative;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    inset 1px 1px 4px rgba(255, 255, 255, 0.1),
+    inset -1px -1px 6px rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin: 0 16px 12px;
+  width: calc(100% - 32px);
+  flex-shrink: 0;
 }
 
-.tabBtn {
-  height: 34px;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--text3);
-  font-size: 12px;
+.radioInput {
+  display: none;
+}
+
+.glassRadioLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 10px 0;
+  cursor: pointer;
   font-weight: 700;
   letter-spacing: -0.01em;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 2;
+  transition: color 0.3s ease-in-out;
 }
 
-.tabBtn:hover {
-  color: var(--text);
-  background: var(--surface3);
+.radioInput:not(:checked)+.glassRadioLabel {
+  color: var(--text3);
 }
 
-.tabActive {
+.radioInput:not(:checked)+.glassRadioLabel:hover {
+  color: var(--text2);
+}
+
+.radioInput:checked+.glassRadioLabel {
   color: #fff;
-  background: var(--accent);
-  box-shadow: 0 2px 8px var(--accent-dim);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-.tabActive:hover {
+.glassGlider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(100% / 3);
+  border-radius: 12px;
+  z-index: 1;
+  transition:
+    transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56),
+    background 0.4s ease-in-out,
+    box-shadow 0.4s ease-in-out;
+}
+
+/* Light blue for active (index 0) */
+.radioInput[value="active"]:checked~.glassGlider {
+  transform: translateX(0%);
+  background: linear-gradient(135deg, rgba(82, 185, 255, 0.5), rgba(0, 140, 255, 0.7));
+  box-shadow:
+    0 0 16px rgba(0, 140, 255, 0.3),
+    inset 0 0 8px rgba(180, 220, 255, 0.2);
+}
+
+/* Light green for rooms (index 1) */
+.radioInput[value="rooms"]:checked~.glassGlider {
+  transform: translateX(100%);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.5), rgba(16, 185, 129, 0.7));
+  box-shadow:
+    0 0 16px rgba(16, 185, 129, 0.3),
+    inset 0 0 8px rgba(167, 243, 208, 0.2);
+}
+
+/* Yellow for friends (index 2) */
+.radioInput[value="friends"]:checked~.glassGlider {
+  transform: translateX(200%);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.5), rgba(245, 158, 11, 0.7));
+  box-shadow:
+    0 0 16px rgba(245, 158, 11, 0.3),
+    inset 0 0 8px rgba(253, 230, 138, 0.2);
+}
+
+.requestBadge {
+  background: var(--red);
   color: #fff;
-  background: var(--accent-hover);
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  line-height: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* ═══ SCROLL AREA ═══ */
@@ -476,8 +539,7 @@
   border: 1px solid var(--border);
 }
 
-.userFilters input,
-.userFilters select {
+.userFilters input {
   height: 36px;
   width: 100%;
   border: 1px solid var(--border);
@@ -489,25 +551,76 @@
   font-weight: 500;
   outline: none;
   transition: border-color 0.2s;
-}
-
-.userFilters input {
   padding: 0 12px;
 }
 
-.userFilters select {
-  padding: 0 10px;
-}
-
-.userFilters input:focus,
-.userFilters select:focus {
+.userFilters input:focus {
   border-color: var(--accent);
 }
 
-.filterRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+.filterExpanded {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterLabel {
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filterChip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filterChip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.filterChipActive {
+  background: linear-gradient(135deg, rgba(82, 185, 255, 0.5), rgba(0, 140, 255, 0.7));
+  border-color: rgba(82, 185, 255, 0.5);
+  color: #fff;
+  box-shadow:
+    0 0 16px rgba(0, 140, 255, 0.3),
+    inset 0 0 8px rgba(180, 220, 255, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.filterToggleBtnActive {
+  background: linear-gradient(135deg, rgba(82, 185, 255, 0.5), rgba(0, 140, 255, 0.7)) !important;
+  border-color: rgba(82, 185, 255, 0.5) !important;
+  color: #fff !important;
+  box-shadow:
+    0 0 16px rgba(0, 140, 255, 0.3),
+    inset 0 0 8px rgba(180, 220, 255, 0.2);
 }
 
 /* ═══ PROFILE / STAR BUTTONS ═══ */
