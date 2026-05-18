@@ -161,10 +161,14 @@ router.post('/request/:userId', async (req, res) => {
                 .eq('id', req.user.id)
                 .single();
 
+            console.log('[friend:request] attempting to notify userId:', targetId);
             const activeTarget = getActiveUser(targetId);
+            console.log('[friend:request] activeTarget found:', !!activeTarget, 'io available:', !!_io);
+
             if (activeTarget && _io) {
                 activeTarget.socketIds.forEach(sid => {
                     const targetSocket = _io.sockets.sockets.get(sid);
+                    console.log('[friend:request] socket found for sid:', sid, !!targetSocket);
                     if (targetSocket) {
                         targetSocket.emit('friend:request', {
                             request: {

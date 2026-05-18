@@ -87,9 +87,11 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
     e.stopPropagation();
     try {
       await sendFriendRequest(userId);
-      alert('Request sent');
-      setPendingOutgoing(prev => prev.includes(userId) ? prev : [...prev, userId]);
-    } catch { }
+      setPendingOutgoing(prev => [...prev, userId]);
+    } catch (err) {
+      const msg = err?.response?.data?.error || 'Failed to send request';
+      alert(msg);
+    }
   };
 
   const handleCreate = async () => {
@@ -443,31 +445,18 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                   <div className={styles.userMeta}>
                     {u.id !== user?.id && (
                       friends.some(f => f.id === u.id) ? (
-                        <button
-                          className={styles.profileSmall}
-                          type="button"
-                          disabled
-                          style={{ color: 'var(--green)', opacity: 1 }}
-                          title="Already friends"
-                        >
-                          Friend
+                        <button className={styles.profileSmall} disabled style={{ color: 'var(--green)' }}>
+                          Friends
                         </button>
                       ) : pendingOutgoing.includes(u.id) ? (
-                        <button
-                          className={styles.profileSmall}
-                          type="button"
-                          disabled
-                          title="Friend request pending"
-                        >
+                        <button className={styles.profileSmall} disabled>
                           Pending
                         </button>
                       ) : (
                         <button
                           className={styles.profileSmall}
-                          type="button"
                           onClick={(e) => handleSendFriendRequest(u.id, e)}
                           disabled={u.id?.startsWith('guest_')}
-                          title={u.id?.startsWith('guest_') ? 'Guest users cannot receive friend requests' : `Send friend request to ${u.username}`}
                         >
                           Add friend
                         </button>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getSocket } from '../socket';
+  import { getSocket, onSocketReset, offSocketReset } from '../socket';
 import useCall from '../hooks/useCall';
 import { usePrivateChat } from '../hooks/usePrivateChat';
 import { fetchStars, toggleStar } from '../utils/api';
@@ -47,26 +47,61 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const socket = getSocket();
-    if (!socket) return;
+    let currentSocket = getSocket();
 
-    // Get online users
-    socket.emit('users:online');
-    const handleUsersList = async (users) => {
-      const others = users.filter(u => u.id !== user.id);
-      const withStats = await applyStarStats(others);
-      setOnlineUsers(withStats);
+    const subscribe = (socket) => {
+      if (!socket) return () => {};
+
+      const handleUsersList = async (users) => {
+        const others = users.filter(u => u.id !== user.id);
+        // Show users immediately without stars
+        setOnlineUsers(others);
+        setIsSocketLoaded(true);
+        // Then fetch stars and update
+        try {
+          const stats = await fetchStars(others.map(u => u.id));
+          setOnlineUsers(
+            others
+              .map(u => ({
+                ...u,
+                stars: stats.counts?.[u.id] || 0,
+                starredByMe: (stats.starredByMe || []).includes(u.id),
+              }))
+              .sort((a, b) => (b.stars || 0) - (a.stars || 0))
+          );
+        } catch {
+          // stars failed, users still visible
+        }
+      };
+
+      const handleUserOnline = () => socket.emit('users:online');
+      const handleUserOffline = () => socket.emit('users:online');
+
+      socket.on('users:list', handleUsersList);
+      socket.on('user:online', handleUserOnline);
+      socket.on('user:offline', handleUserOffline);
+
+      socket.emit('users:online');
+
+      return () => {
+        socket.off('users:list', handleUsersList);
+        socket.off('user:online', handleUserOnline);
+        socket.off('user:offline', handleUserOffline);
+      };
     };
-    const handleUserOnline = () => socket.emit('users:online');
-    const handleUserOffline = () => socket.emit('users:online');
-    socket.on('users:list', handleUsersList);
-    socket.on('user:online', handleUserOnline);
-    socket.on('user:offline', handleUserOffline);
+
+    let cleanup = subscribe(currentSocket);
+
+    const handleReset = (newSocket) => {
+      if (cleanup) cleanup();
+      cleanup = subscribe(newSocket);
+    };
+
+    onSocketReset(handleReset);
 
     return () => {
-      socket.off('users:list', handleUsersList);
-      socket.off('user:online', handleUserOnline);
-      socket.off('user:offline', handleUserOffline);
+      if (cleanup) cleanup();
+      offSocketReset(handleReset);
     };
   }, [user.id]);
 
@@ -86,26 +121,26 @@ export default function Home() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const handleUserClick = (u) => {
+  const handleUserClick = useCallback((u) => {
     setPrivateChatUser(u);
     openChat(u.id);
     if (isMobile) setMobileView('dm');
-  };
+  }, [openChat, isMobile]);
 
-  const handleRoomSelect = (room) => {
+  const handleRoomSelect = useCallback((room) => {
     setActiveRoom(room);
     if (isMobile) setMobileView('room');
-  };
+  }, [isMobile]);
 
-  const handleCall = (targetUser, type = 'voice') => {
+  const handleCall = useCallback((targetUser, type = 'voice') => {
     startCall(targetUser, type);
-  };
+  }, [startCall]);
 
-  const handleViewProfile = (u) => {
+  const handleViewProfile = useCallback((u) => {
     navigate(`/profile?user=${u.id}`);
-  };
+  }, [navigate]);
 
-  const handleUserStar = async (targetUserId) => {
+  const handleUserStar = useCallback(async (targetUserId) => {
     if (!targetUserId || starringUserId || targetUserId === user.id) return;
     setStarringUserId(targetUserId);
     try {
@@ -127,7 +162,7 @@ export default function Home() {
     } finally {
       setStarringUserId('');
     }
-  };
+  }, [user.id, starringUserId]);
 
   const handleSplashDone = useCallback(() => setSplashDone(true), []);
 
