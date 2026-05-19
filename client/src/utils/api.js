@@ -1,14 +1,34 @@
 import axios from 'axios';
 import { getStoredToken } from './token';
 
-const SERVER = import.meta.env.VITE_SERVER_URL || '';
+/** In dev, always use Vite proxy (/api → :5000) so auth cookies/tokens stay same-origin. */
+function resolveApiBaseURL() {
+  if (import.meta.env.DEV) return '/api';
+  const server = (import.meta.env.VITE_SERVER_URL || '').replace(/\/$/, '');
+  return server ? `${server}/api` : '/api';
+}
 
-export const api = axios.create({ baseURL: `${SERVER}/api` });
+export const api = axios.create({ baseURL: resolveApiBaseURL() });
 
-// Auto attach token
-api.interceptors.request.use(cfg => {
+export function setApiAuthToken(token) {
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+  }
+}
+
+// Attach JWT on every request (storage + axios default fallback)
+api.interceptors.request.use((cfg) => {
   const token = getStoredToken();
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
+  const header =
+    token
+      ? `Bearer ${token}`
+      : api.defaults.headers.common.Authorization || axios.defaults.headers.common.Authorization;
+
+  if (header) {
+    cfg.headers.Authorization = header;
+  }
   return cfg;
 });
 
@@ -58,8 +78,10 @@ export const fetchSettings = () => api.get('/settings').then(r => r.data);
 
 export const updateSettings = (settings) => api.put('/settings', settings).then(r => r.data);
 
-export const sendHelpMessage = (message) =>
-  api.post('/settings/help', { message }).then(r => r.data);
+export const sendHelpMessage = (message, authToken) =>
+  api.post('/settings/help', { message }, authToken ? {
+    headers: { Authorization: `Bearer ${authToken}` },
+  } : undefined).then(r => r.data);
 
 export const blockUser = (userId) =>
   api.post(`/settings/block/${userId}`).then(r => r.data);

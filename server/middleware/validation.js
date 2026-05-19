@@ -227,5 +227,6 @@ module.exports = {
   sanitizeText,
   sanitizeUrl,
   sanitizeUserId,
+  sanitizeUsername,
   sanitizeUuid,
 };

@@ -2,9 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { clearStoredToken } from '../utils/token';
-import axios from 'axios';
-
-const SERVER = import.meta.env.VITE_SERVER_URL || '';
+import { api } from '../utils/api';
 
 export default function AuthCallback() {
   const { loginWithToken } = useAuth();
@@ -13,7 +11,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const fetchUserFromCookie = async () => {
       try {
-        const res = await axios.get(`${SERVER}/api/auth/oauth-token`, { withCredentials: true });
+        const res = await api.get('/auth/oauth-token', { withCredentials: true });
         const { user, token } = res.data;
         loginWithToken(user, token);
         navigate('/');

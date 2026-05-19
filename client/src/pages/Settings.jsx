@@ -12,7 +12,7 @@ import { setNotificationSoundEnabled } from '../utils/notifications';
 import styles from './Settings.module.css';
 
 export default function Settings() {
-  const { user, updateUser } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -80,13 +80,18 @@ export default function Settings() {
     }
     setHelpStatus('');
     try {
-      const res = await sendHelpMessage(helpText.trim());
+      const res = await sendHelpMessage(helpText.trim(), token || undefined);
       setHelpText('');
       setHelpStatus(res.delivered
         ? 'Message sent. We will get back to you soon.'
         : 'Message received. Thank you for reaching out.');
-    } catch {
-      setHelpStatus('Could not send message. Try again later.');
+    } catch (err) {
+      const msg = err?.response?.status === 401
+        ? 'Session expired. Please log out and log in again, then retry.'
+        : err?.response?.status === 403
+          ? 'Guests cannot send help messages. Create an account first.'
+          : 'Could not send message. Try again later.';
+      setHelpStatus(msg);
     }
   };
 
