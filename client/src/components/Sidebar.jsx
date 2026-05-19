@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../socket';
+import { getUserFlairs } from '../utils/flairs';
+import FlairBadge from './FlairBadge';
 import {
   fetchGroups,
   createGroup,
@@ -169,7 +172,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
     <div className={styles.sidebar}>
       {/* Header */}
       <div className={styles.header}>
-        <span className={styles.logo}>NexChat</span>
+        <span className={styles.logo}>ChatOra</span>
         <div className={styles.headerActions}>
 
           <button className={styles.iconBtn} onClick={() => navigate('/profile')} title="Profile">
@@ -177,6 +180,11 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
             </svg>
           </button>
+          {!user?.isGuest && (
+            <button className={styles.iconBtn} onClick={() => navigate('/settings')} title="Settings">
+              <Settings size={16} />
+            </button>
+          )}
           <button className={styles.iconBtn} onClick={logout} title="Logout">
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
@@ -335,7 +343,14 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                       )}
                     </div>
                     <div className={styles.userContent}>
-                      <span className={styles.userName}>{friend.username}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span className={styles.userName}>{friend.username}</span>
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          {getUserFlairs(friend).map((f) => (
+                            <FlairBadge key={f.id} flair={f} size="xs" />
+                          ))}
+                        </div>
+                      </div>
                       <div className={styles.userMeta}>
                         {isOnline && (
                           <button
@@ -355,7 +370,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                         </button>
                         <button
                           className={styles.profileSmall}
-                          onClick={e => { e.stopPropagation(); unfriend(friend.friendship_id).then(loadFriends); }}
+                          onClick={e => { e.stopPropagation(); unfriend(friend.id).then(loadFriends).catch(() => alert('Failed to remove friend')); }}
                         >
                           Unfriend
                         </button>
@@ -457,7 +472,14 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                     : u.username?.slice(0, 2).toUpperCase()}
                 </div>
                 <div className={styles.userContent}>
-                  <span className={styles.userName}>{u.username}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span className={styles.userName}>{u.username}</span>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {getUserFlairs(u).map((f) => (
+                        <FlairBadge key={f.id} flair={f} size="xs" />
+                      ))}
+                    </div>
+                  </div>
                   <div className={styles.userMeta}>
                     {u.id !== user?.id && (
                       friends.some(f => f.id === u.id) ? (

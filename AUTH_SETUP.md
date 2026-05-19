@@ -6,7 +6,7 @@
 
 ```env
 # JWT Secret (should be a long random string)
-JWT_SECRET=your_jwt_secret_key_here
+JWT_SECRET=replace_with_a_long_random_secret
 
 # Google OAuth Credentials (from Google Cloud Console)
 GOOGLE_CLIENT_ID=your_google_client_id

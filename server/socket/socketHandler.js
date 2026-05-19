@@ -2,6 +2,15 @@ const redis = require('../redis/redisClient');
 const supabase = require('../db/supabase');
 const { v4: uuidv4 } = require('uuid');
 const { getUserColumns } = require('../db/userColumns');
+const {
+  ensureSizeUnder,
+  sanitizeFileName,
+  sanitizeString,
+  sanitizeText,
+  sanitizeUrl,
+  sanitizeUserId,
+  sanitizeUuid,
+} = require('../middleware/validation');
 
 // ─── PROFANITY FILTER ────────────────────────────────────────────
 const BAD_WORDS = [
@@ -25,16 +34,15 @@ const filterMessage = (text) => {
 
 // ─── XSS SANITIZER ───────────────────────────────────────────────
 const sanitize = (str) => {
-  if (typeof str !== 'string') return '';
-  return str
+  const cleaned = sanitizeText(str, { field: 'text', min: 1, max: 2000, allowNewlines: true });
+  return cleaned
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;')
     .replace(/\//g, '&#x2F;')
-    .trim()
-    .slice(0, 2000);
+    .trim();
 };
 
 // ─── SOCKET RATE LIMITER ─────────────────────────────────────────
@@ -117,16 +125,24 @@ const safeParseUser = (raw) => {
 
 const activeUsers = new Map();
 
-const publicUser = (user) => ({
-  id: user.id,
-  username: user.username,
-  avatar_url: user.avatar_url,
-  country: user.country || null,
-  state: user.state || null,
-  gender: user.gender || 'other',
-  age: user.age || null,
-  star_count: user.star_count || 0,
-});
+const { withOwnerFlag } = require('../utils/owner');
+
+const publicUser = (user) => {
+  const u = withOwnerFlag(user);
+  return {
+    id: u.id,
+    username: u.username,
+    avatar_url: u.avatar_url,
+    country: u.country || null,
+    state: u.state || null,
+    gender: u.gender || 'other',
+    age: u.age || null,
+    star_count: u.star_count || 0,
+    is_owner: Boolean(u.is_owner),
+    flair: u.flair || null,
+    flairs: Array.isArray(u.flairs) ? u.flairs : (u.flair ? [u.flair] : []),
+  };
+};
 
 const addActiveSocket = (user, socketId) => {
   const existing = activeUsers.get(user.id);
@@ -322,6 +338,10 @@ let cachedUserListAt = 0;
 const USER_LIST_CACHE_MS = 3000; // 3 second cache
 
 const handler = (io) => {
+  const emitValidationError = (socket, event, message) => {
+    socket.emit(event, { error: message });
+  };
+
   // Track typing timeouts (with size guard)
   const typingTimeouts = new Map();
   const MAX_TYPING_ENTRIES = 5000;
@@ -346,7 +366,11 @@ const handler = (io) => {
 
     // ─── JOIN ROOM ──────────────────────────────────────────────
     socket.on('room:join', async ({ roomId }) => {
-      if (!roomId) return;
+      try {
+        roomId = sanitizeUuid(roomId, 'roomId');
+      } catch {
+        return;
+      }
       if (!checkRate(socket.id, 'room:join')) return socket.emit('error', { message: 'Too many requests, slow down' });
       socket.join(roomId);
 
@@ -363,6 +387,11 @@ const handler = (io) => {
 
     // ─── LEAVE ROOM ─────────────────────────────────────────────
     socket.on('room:leave', async ({ roomId }) => {
+      try {
+        roomId = sanitizeUuid(roomId, 'roomId');
+      } catch {
+        return;
+      }
       socket.leave(roomId);
       const roomSockets = await io.in(roomId).allSockets();
       io.to(roomId).emit('room:count', { roomId, count: roomSockets.size });
@@ -370,7 +399,13 @@ const handler = (io) => {
 
     // ─── SEND MESSAGE TO ROOM ────────────────────────────────────
     socket.on('message:send', async ({ roomId, text, replyTo }) => {
-      if (!roomId || !text) return;
+      try {
+        roomId = sanitizeUuid(roomId, 'roomId');
+        ensureSizeUnder({ roomId, text, replyTo }, 'message', 8192);
+        replyTo = replyTo ? sanitizeUuid(replyTo, 'replyTo') : null;
+      } catch {
+        return emitValidationError(socket, 'message:error', 'Invalid message payload');
+      }
       if (!checkRate(socket.id, 'message:send')) return socket.emit('message:error', { error: 'You are sending messages too fast. Slow down.' });
 
       const clean = filterMessage(sanitize(text));
@@ -407,7 +442,20 @@ const handler = (io) => {
 
     // ─── SEND FILE/IMAGE IN ROOM ─────────────────────────────────
     socket.on('message:file', async ({ roomId, fileUrl, fileName, fileType, fileSize }) => {
-      if (!roomId || !fileUrl) return;
+      try {
+        roomId = sanitizeUuid(roomId, 'roomId');
+        fileUrl = sanitizeUrl(fileUrl, { field: 'fileUrl', max: 2048, allowedHosts: ['res.cloudinary.com', 'cloudinary.com'] });
+        fileName = sanitizeFileName(fileName);
+        fileType = sanitizeString(String(fileType || ''), { field: 'fileType', min: 1, max: 100, pattern: /^[A-Za-z0-9.+\/-]+$/ });
+        if (fileSize !== undefined && fileSize !== null) {
+          const parsedSize = Number(fileSize);
+          if (!Number.isInteger(parsedSize) || parsedSize < 1 || parsedSize > 10 * 1024 * 1024) throw new Error('Invalid file size');
+          fileSize = parsedSize;
+        }
+        ensureSizeUnder({ roomId, fileUrl, fileName, fileType, fileSize }, 'file message', 16384);
+      } catch {
+        return emitValidationError(socket, 'message:error', 'Invalid file payload');
+      }
       if (!checkRate(socket.id, 'message:file')) return socket.emit('message:error', { error: 'Too many file uploads. Slow down.' });
 
       const { data: group } = await supabase.from('groups').select('is_global').eq('id', roomId).single();
@@ -423,7 +471,7 @@ const handler = (io) => {
         roomId,
         text: '',
         fileUrl,
-        fileName: sanitize(fileName),
+        fileName,
         fileType,
         fileSize,
         sender: buildSender(user),
@@ -437,7 +485,7 @@ const handler = (io) => {
         room_id: roomId,
         sender_id: user.id,
         file_url: fileUrl,
-        file_name: sanitize(fileName),
+        file_name: fileName,
         file_type: fileType,
         file_size: fileSize || null,
       });
@@ -453,7 +501,11 @@ const handler = (io) => {
 
     // ─── TYPING INDICATOR ────────────────────────────────────────
     socket.on('typing:start', ({ roomId }) => {
-      if (!roomId) return;
+      try {
+        roomId = sanitizeUuid(roomId, 'roomId');
+      } catch {
+        return;
+      }
       if (!checkRate(socket.id, 'typing:start')) return;
       socket.to(roomId).emit('typing:update', {
         userId: user.id,
@@ -475,7 +527,11 @@ const handler = (io) => {
     });
 
     socket.on('typing:stop', ({ roomId }) => {
-      if (!roomId) return;
+      try {
+        roomId = sanitizeUuid(roomId, 'roomId');
+      } catch {
+        return;
+      }
       const key = `${user.id}:${roomId}`;
       if (typingTimeouts.has(key)) {
         clearTimeout(typingTimeouts.get(key));
@@ -488,7 +544,11 @@ const handler = (io) => {
 
     // ─── PRIVATE MESSAGES ────────────────────────────────────────
     socket.on('private:history', async ({ withUserId }) => {
-      if (!withUserId) return;
+      try {
+        withUserId = sanitizeUserId(withUserId, 'withUserId', { allowGuest: true });
+      } catch {
+        return socket.emit('private:history', { withUserId, messages: [] });
+      }
       if (!checkRate(socket.id, 'private:history')) return socket.emit('private:history', { withUserId, messages: [] });
 
       try {
@@ -516,7 +576,18 @@ const handler = (io) => {
 
     socket.on('private:send', async ({ toUserId, text, fileUrl, fileName, fileType, ciphertext, nonce, encrypted }) => {
       // Accept either plaintext text OR ciphertext payload. Do not touch ciphertext.
-      if (!toUserId || (!text && !fileUrl && !ciphertext)) return;
+      try {
+        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
+        ensureSizeUnder({ toUserId, text, fileUrl, fileName, fileType, ciphertext, nonce, encrypted }, 'private message', 32768);
+        if (fileUrl) fileUrl = sanitizeUrl(fileUrl, { field: 'fileUrl', max: 2048, allowedHosts: ['res.cloudinary.com', 'cloudinary.com'] });
+        if (fileName) fileName = sanitizeFileName(fileName);
+        if (fileType) fileType = sanitizeString(String(fileType), { field: 'fileType', min: 1, max: 100, pattern: /^[A-Za-z0-9.+\/-]+$/ });
+        if (ciphertext && typeof ciphertext !== 'string') throw new Error('Invalid ciphertext');
+        if (nonce && typeof nonce !== 'string') throw new Error('Invalid nonce');
+      } catch {
+        return socket.emit('message:error', { error: 'Invalid private message payload' });
+      }
+      if (!text && !fileUrl && !ciphertext) return;
       if (!checkRate(socket.id, 'private:send')) return socket.emit('message:error', { error: 'You are sending messages too fast. Slow down.' });
 
       const isEncrypted = !!encrypted && !!ciphertext;
@@ -527,7 +598,7 @@ const handler = (io) => {
         toUserId,
         text: safeText,
         fileUrl: fileUrl || null,
-        fileName: fileName ? sanitize(fileName) : null,
+        fileName: fileName || null,
         fileType: fileType || null,
         ciphertext: ciphertext || null,
         nonce: nonce || null,
@@ -636,7 +707,13 @@ const handler = (io) => {
     });
 
     socket.on('call:offer', async ({ toUserId, offer, callType }) => {
-      if (!toUserId || !offer) return;
+      try {
+        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
+        ensureSizeUnder({ toUserId, offer, callType }, 'call offer', 65536);
+        callType = callType ? sanitizeString(String(callType), { field: 'callType', min: 3, max: 16, pattern: /^(voice|video)$/i }) : 'voice';
+      } catch {
+        return socket.emit('call:error', { message: 'Invalid call payload' });
+      }
       if (!checkRate(socket.id, 'call:offer')) return socket.emit('call:error', { message: 'Too many call attempts' });
       if (user.isGuest) return socket.emit('call:error', { message: 'Guests cannot make calls' });
       const { data: target } = await supabase.from('users').select('id, calls_enabled').eq('id', toUserId).maybeSingle();
@@ -651,7 +728,12 @@ const handler = (io) => {
     });
 
     socket.on('call:answer', ({ toUserId, answer }) => {
-      if (!toUserId || !answer) return;
+      try {
+        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
+        ensureSizeUnder({ toUserId, answer }, 'call answer', 65536);
+      } catch {
+        return;
+      }
       const activeTarget = getActiveUser(toUserId);
       if (!activeTarget) return;
       activeTarget.socketIds.forEach(sid => {
@@ -661,7 +743,12 @@ const handler = (io) => {
     });
 
     socket.on('call:ice', ({ toUserId, candidate }) => {
-      if (!toUserId || !candidate) return;
+      try {
+        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
+        ensureSizeUnder({ toUserId, candidate }, 'call candidate', 65536);
+      } catch {
+        return;
+      }
       const activeTarget = getActiveUser(toUserId);
       if (!activeTarget) return;
       activeTarget.socketIds.forEach(sid => {
@@ -671,7 +758,11 @@ const handler = (io) => {
     });
 
     socket.on('call:decline', ({ toUserId }) => {
-      if (!toUserId) return;
+      try {
+        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
+      } catch {
+        return;
+      }
       const activeTarget = getActiveUser(toUserId);
       if (!activeTarget) return;
       activeTarget.socketIds.forEach(sid => {
@@ -681,7 +772,11 @@ const handler = (io) => {
     });
 
     socket.on('call:end', ({ toUserId }) => {
-      if (!toUserId) return;
+      try {
+        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
+      } catch {
+        return;
+      }
       const activeTarget = getActiveUser(toUserId);
       if (!activeTarget) return;
       activeTarget.socketIds.forEach(sid => {
@@ -691,7 +786,13 @@ const handler = (io) => {
     });
 
     socket.on('key:exchange', ({ toUserId, publicKey }) => {
-      if (!toUserId || !publicKey) return;
+      try {
+        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
+        publicKey = sanitizeString(String(publicKey || ''), { field: 'publicKey', min: 32, max: 8192 });
+        ensureSizeUnder({ toUserId, publicKey }, 'key exchange', 16384);
+      } catch {
+        return;
+      }
       const activeTarget = getActiveUser(toUserId);
       if (!activeTarget) return;
       activeTarget.socketIds.forEach(sid => {

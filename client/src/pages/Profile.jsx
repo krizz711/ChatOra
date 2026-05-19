@@ -2,11 +2,22 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload } from 'lucide-react';
+import PageBack from '../components/PageBack';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile, uploadAvatar } from '../utils/api';
-import { getStoredToken } from '../utils/token';
-import axios from 'axios';
+import { getSocket } from '../socket';
+import {
+  updateProfile,
+  uploadAvatar,
+  blockUser,
+  updateFlairs,
+  fetchMe,
+  fetchUserProfile,
+  fetchFriendsForUser,
+} from '../utils/api';
 import styles from './Profile.module.css';
+import { getUserFlairs } from '../utils/flairs';
+import FlairPicker from '../components/FlairPicker';
+import FlairBadge from '../components/FlairBadge';
 import { getCode } from 'country-list';
 import 'flag-icons/css/flag-icons.min.css';
 import { Country, State } from 'country-state-city';
@@ -24,6 +35,7 @@ export default function Profile() {
   const [viewingUser, setViewingUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [friendsList, setFriendsList] = useState([]);
+  const [friendsHidden, setFriendsHidden] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     username: user?.username || '',
@@ -38,8 +50,8 @@ export default function Profile() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const fileRef = useRef(null);
+  const [showFlairPicker, setShowFlairPicker] = useState(false);
 
-  const SERVER = import.meta.env.VITE_SERVER_URL || '';
   const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
 
   useEffect(() => {
@@ -58,13 +70,9 @@ export default function Profile() {
     const userId = searchParams.get('user');
     if (userId) {
       setLoading(true);
-      const token = getStoredToken();
-      axios.get(`${SERVER}/api/auth/users/${userId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-        .then(r => r.data)
-        .then(data => {
-          if (data.success) setViewingUser(data.user);
+      fetchUserProfile(userId)
+        .then((data) => {
+          if (data?.success) setViewingUser(data.user);
           else setViewingUser(null);
         })
         .catch(() => setViewingUser(null))
@@ -73,22 +81,45 @@ export default function Profile() {
     }
     setViewingUser(null);
     setLoading(false);
-  }, [searchParams, SERVER]);
+  }, [searchParams]);
 
   // Fetch friends of target user
   let target = viewingUser || user;
 
   useEffect(() => {
     if (target?.id) {
-      const token = getStoredToken();
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      axios.get(`${SERVER}/api/friends/list/${target.id}`, { headers })
-        .then(r => setFriendsList(r.data))
-        .catch(err => setFriendsList([]));
+      fetchFriendsForUser(target.id)
+        .then((data) => {
+          if (data?.hidden) {
+            setFriendsHidden(true);
+            setFriendsList([]);
+          } else {
+            setFriendsHidden(false);
+            setFriendsList(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch(() => {
+          setFriendsHidden(false);
+          setFriendsList([]);
+        });
     } else {
       setFriendsList([]);
     }
-  }, [target?.id, SERVER]);
+  }, [target?.id]);
+
+  // Listen for real-time friend updates
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleFriendRemoved = ({ removedUserId }) => {
+      setFriendsList(prev => prev.filter(f => f.id !== removedUserId));
+    };
+
+    socket.on('friend:removed', handleFriendRemoved);
+
+    return () => socket.off('friend:removed', handleFriendRemoved);
+  }, []);
 
   const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
@@ -129,9 +160,7 @@ export default function Profile() {
     return (
       <div className={styles.page}>
         <motion.div className={styles.card} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
-          <button className={styles.backBtn} onClick={() => navigate('/')}>
-            <ArrowLeft size={14} /> Back to chat
-          </button>
+          <PageBack label="Back to chat" onClick={() => navigate('/')} className={styles.backBtnWrap} />
           <div className={styles.sectionTitle} style={{ marginTop: 16 }}>Guest Session</div>
           <div>
             <p>You're chatting as <strong>{user.username}</strong> (guest).</p>
@@ -156,9 +185,7 @@ export default function Profile() {
         initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
 
-        <button className={styles.backBtn} onClick={() => navigate(-1)}>
-          <ArrowLeft size={14} /> Back
-        </button>
+        <PageBack label="Back" onClick={() => navigate(-1)} className={styles.backBtnWrap} />
 
         {msg && <div className={styles.successMsg}>{msg}</div>}
         {error && <div className={styles.errorMsg}>{error}</div>}
@@ -201,8 +228,29 @@ export default function Profile() {
 
             <div className={styles.badgesRow}>
               {target.role === 'admin' && <div className={styles.badge} style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>Admin</div>}
-              {target.star_count >= 10 && <div className={styles.badge} style={{ borderColor: 'var(--yellow)', color: 'var(--yellow)' }}>Popular</div>}
+              {getUserFlairs(target, { showPrivate: isMe }).map(f => (
+                <FlairBadge key={f.id} flair={f} />
+              ))}
             </div>
+
+            {!isMe && !user?.isGuest && (
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnSm}`}
+                style={{ color: 'var(--red)', borderColor: 'var(--red)', marginTop: 4 }}
+                onClick={async () => {
+                  if (!window.confirm(`Block ${target.username}? They will not be able to interact with you.`)) return;
+                  try {
+                    await blockUser(target.id);
+                    setMsg('User blocked. Manage blocked users in Settings.');
+                  } catch {
+                    setError('Could not block user. Run the latest database migration if needed.');
+                  }
+                }}
+              >
+                Block user
+              </button>
+            )}
 
             {isMe && (
               <div className={styles.headerActions}>
@@ -215,8 +263,8 @@ export default function Profile() {
                     Edit Profile
                   </button>
                 )}
-                <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`}>
-                  Change Flair
+                <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`} onClick={() => setShowFlairPicker(true)}>
+                  {(user?.flair || (user?.flairs && user.flairs.length > 0)) ? 'Change Flair' : 'Add Flair'}
                 </button>
               </div>
             )}
@@ -324,16 +372,45 @@ export default function Profile() {
                 +{friendsList.length - 3}
               </div>
             )}
-            {friendsList.length === 0 && (
+            {friendsList.length === 0 && !friendsHidden && (
               <div style={{ fontSize: 13, color: 'var(--text2)', marginLeft: 8 }}>No friends yet.</div>
             )}
+            {friendsHidden && !isMe && (
+              <div style={{ fontSize: 13, color: 'var(--text2)', marginLeft: 8 }}>Friends list is private</div>
+            )}
           </div>
-          <button className={styles.viewAllBtn}>
-            View All <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
-          </button>
+          {(isMe || !friendsHidden) && (
+            <button
+              type="button"
+              className={styles.viewAllBtn}
+              onClick={() => navigate(isMe ? '/friends' : `/friends?user=${target.id}`)}
+            >
+              View All <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
+            </button>
+          )}
         </div>
 
       </motion.div>
+      {showFlairPicker && (
+        <FlairPicker
+          user={user}
+          onSave={async (flairIds) => {
+            try {
+              const data = await updateFlairs(flairIds);
+              if (data?.user) updateUser(data.user);
+              else {
+                const me = await fetchMe();
+                if (me?.user) updateUser(me.user);
+              }
+            } catch (e) {
+              const msg = e.response?.data?.error || 'Failed to save flairs';
+              console.error('Failed to save flairs', e);
+              alert(msg);
+            }
+          }}
+          onClose={() => setShowFlairPicker(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,95 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.badge:hover {
+  transform: scale(1.05);
+}
+
+.emoji {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+}
+
+.label {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease, width 0.2s ease;
+  white-space: nowrap;
+}
+
+.badge:hover .label {
+  opacity: 1;
+  width: auto;
+}
+
+.sm {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.md {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.lg {
+  font-size: 13px;
+  padding: 8px 14px;
+}
+
+.earthBadge {
+  border-color: #38bdf8;
+  color: #e0f2fe;
+  background: linear-gradient(145deg, rgba(14, 165, 233, 0.35), rgba(56, 189, 248, 0.2));
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.earthBadge .label {
+  opacity: 1;
+  width: auto;
+}
+
+.earthIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.earthGlobe {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #7dd3fc, #0ea5e9 45%, #0369a1 100%);
+  box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.25);
+  animation: earthSpin 4s linear infinite;
+  position: relative;
+}
+
+.earthGlobe::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse 60% 40% at 35% 40%, rgba(124, 193, 51, 0.85), transparent 55%),
+    radial-gradient(ellipse 40% 30% at 70% 65%, rgba(124, 193, 51, 0.6), transparent 50%);
+}
+
+@keyframes earthSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

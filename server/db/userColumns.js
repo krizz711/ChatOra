@@ -20,6 +20,12 @@ const optionalUserColumns = [
   'google_id',
   'auth_provider',
   'password_hash',
+  'calls_enabled',
+  'notification_sound',
+  'friends_list_hidden',
+  'is_owner',
+  'flair',
+  'flairs',
 ];
 
 async function hasUsersColumn(columnName) {

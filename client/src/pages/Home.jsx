@@ -12,6 +12,7 @@ import IncomingCall from '../components/IncomingCall';
 import CallingScreen from '../components/CallingScreen';
 import SplashScreen from '../components/SplashScreen';
 import styles from './Home.module.css';
+import PageBack from '../components/PageBack';
 
 export default function Home() {
   const { user } = useAuth();
@@ -29,7 +30,7 @@ export default function Home() {
     }
     return 'active';
   });
-  const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id);
+  const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id, user);
   const { callState, callType, remoteUser, incomingCall, startCall, acceptCall, declineCall, endCall, localVideoRef, remoteVideoRef } = useCall(user);
   const [isSocketLoaded, setIsSocketLoaded] = useState(false);
 
@@ -201,10 +202,10 @@ export default function Home() {
           />
         ) : mobileView === 'room' ? (
           <div className={styles.mobileChatView}>
-            <div className={styles.mobileBackBar}>
-              <button onClick={() => { setMobileView('list'); setActiveRoom(null); }}>&larr; Back</button>
-              <div style={{ fontWeight: 700 }}>{activeRoom?.name || 'Room'}</div>
-            </div>
+            <header className={styles.mobileBackBar}>
+              <PageBack label="Chats" onClick={() => { setMobileView('list'); setActiveRoom(null); }} />
+              <h1 className={styles.mobileChatTitle}>{activeRoom?.name || 'Room'}</h1>
+            </header>
             {activeRoom && (
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <ChatRoom key={activeRoom.id} room={activeRoom} onUserClick={handleUserClick} />
@@ -213,10 +214,10 @@ export default function Home() {
           </div>
         ) : (
           <div className={styles.mobileChatView}>
-            <div className={styles.mobileBackBar}>
-              <button onClick={() => { setMobileView('list'); closeChat(); setPrivateChatUser(null); }}>&larr; Back</button>
-              <div style={{ fontWeight: 700 }}>{privateChatUser?.username || 'Direct Message'}</div>
-            </div>
+            <header className={styles.mobileBackBar}>
+              <PageBack label="Chats" onClick={() => { setMobileView('list'); closeChat(); setPrivateChatUser(null); }} />
+              <h1 className={styles.mobileChatTitle}>{privateChatUser?.username || 'Direct Message'}</h1>
+            </header>
             <div style={{ flex: 1, overflow: 'hidden' }}>
               {activeChat && privateChatUser && (
                 <PrivateChat
@@ -255,7 +256,7 @@ export default function Home() {
             ) : (
               <div className={styles.welcome}>
                 <div className={styles.welcomeInner}>
-                  <div className={styles.welcomeLogo}>NexChat</div>
+                  <div className={styles.welcomeLogo}>ChatOra</div>
                   <p>Select a room from the sidebar to start chatting.</p>
                   <p className={styles.hint}>Messages are not stored — they live only while you're connected.</p>
                 </div>

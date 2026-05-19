@@ -88,6 +88,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/friends', require('./routes/friends')(io));
+app.use('/api/settings', require('./routes/settings'));
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), require('./routes/billing').webhook);
 app.use('/api/billing', authMiddleware, require('./routes/billing'));
 

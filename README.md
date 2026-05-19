@@ -91,17 +91,17 @@ Create `server/.env` from `server/.env.example`:
 PORT=5000
 CLIENT_URL=http://localhost:5173
 
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-JWT_SECRET=make_this_long_and_random_32chars_min
+JWT_SECRET=replace_with_a_long_random_secret
 
-UPSTASH_REDIS_REST_URL=https://xxx.upstash.io
-UPSTASH_REDIS_REST_TOKEN=xxxxx
+UPSTASH_REDIS_REST_URL=https://your-workspace.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_upstash_token
 
-CLOUDINARY_CLOUD_NAME=your_cloud
-CLOUDINARY_API_KEY=123456789
-CLOUDINARY_API_SECRET=xxxxxx
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
 ---

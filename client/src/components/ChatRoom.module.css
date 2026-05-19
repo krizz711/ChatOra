@@ -428,6 +428,7 @@
   -webkit-backdrop-filter: blur(40px);
   flex-shrink: 0;
   transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: visible;
 }
 
 .attachBtn {

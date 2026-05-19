@@ -1,10 +1,12 @@
 import React, { useRef, useEffect, useState, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../hooks/useChat';
-import { uploadFile } from '../utils/api';
 import { downloadChatTxt, downloadChatZip, downloadFile } from '../utils/download';
 import { format } from 'date-fns';
+import { getUserFlairs } from '../utils/flairs';
+import FlairBadge from './FlairBadge';
 import styles from './ChatRoom.module.css';
+import EmojiPicker from './EmojiPicker';
 
 const MessageRow = memo(({ msg, isMine, showAvatar, user, onUserClick, onReply, styles }) => {
   const sender = isMine ? user : (msg.sender || {});
@@ -28,8 +30,15 @@ const MessageRow = memo(({ msg, isMine, showAvatar, user, onUserClick, onReply, 
 
       <div className={styles.msgContent}>
         {showAvatar && !isMine && (
-          <div className={styles.senderName} onClick={() => onUserClick?.(sender)} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Click to message">
-            {sender.username || 'Unknown'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div className={styles.senderName} onClick={() => onUserClick?.(sender)} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Click to message">
+              {sender.username || 'Unknown'}
+            </div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {getUserFlairs(sender).map((f) => (
+                <FlairBadge key={f.id} flair={f} size="xs" />
+              ))}
+            </div>
           </div>
         )}
 
@@ -84,19 +93,29 @@ const MessageRow = memo(({ msg, isMine, showAvatar, user, onUserClick, onReply, 
 
 function ChatRoom({ room, onUserClick }) {
   const { user } = useAuth();
-  const { messages, typingUsers, onlineCount, sendMessage, sendFile, sendTypingStart, sendTypingStop } = useChat(room.id);
+  const { messages, typingUsers, onlineCount, sendMessage, sendTypingStart, sendTypingStop } = useChat(room.id);
   const [text, setText] = useState('');
+  const [showEmoji, setShowEmoji] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [showDownload, setShowDownload] = useState(false);
   const bottomRef = useRef(null);
-  const fileRef = useRef(null);
+  const emojiWrapRef = useRef(null);
   const typingList = Object.values(typingUsers).filter(u => u !== user.username);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    if (!showEmoji) return;
+    const close = (e) => {
+      if (emojiWrapRef.current && !emojiWrapRef.current.contains(e.target)) {
+        setShowEmoji(false);
+      }
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [showEmoji]);
 
   const handleSend = () => {
     if (!text.trim()) return;
@@ -118,29 +137,6 @@ function ChatRoom({ room, onUserClick }) {
     if (e.target.value) sendTypingStart();
     else sendTypingStop();
   };
-
-
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (room.is_global) {
-      if ((file.type.startsWith('image/') && file.type !== 'image/gif') || file.type.startsWith('video/')) {
-        alert('Images and videos are not allowed in global rooms. Only GIFs are permitted.');
-        fileRef.current.value = '';
-        return;
-      }
-    }
-    setUploading(true); setUploadProgress(0);
-    try {
-      const data = await uploadFile(file, p => setUploadProgress(p));
-      sendFile(data.url, data.originalName, data.mimetype, data.size);
-    } catch { alert('Upload failed. Check file size (max 10MB).'); }
-    finally { setUploading(false); fileRef.current.value = ''; }
-  };
-
-
 
   return (
     <div className={styles.room}>
@@ -216,23 +212,26 @@ function ChatRoom({ room, onUserClick }) {
         </div>
       )}
 
-      {/* Upload progress */}
-      {uploading && (
-        <div className={styles.uploadBar}>
-          <div className={styles.uploadFill} style={{ width: `${uploadProgress}%` }} />
-          <span>Uploading {uploadProgress}%</span>
-        </div>
-      )}
-
       {/* Input */}
       <div className={styles.inputArea}>
-        <input type="file" ref={fileRef} onChange={handleFileUpload} style={{ display: 'none' }}
-          accept={room.is_global ? "image/gif,.pdf,.txt,.zip" : "image/*,video/*,.pdf,.txt,.zip"} />
-        <button className={styles.attachBtn} onClick={() => fileRef.current?.click()} disabled={uploading}>
-          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
+        <div className="emojiPickerWrap" ref={emojiWrapRef}>
+          <button
+            type="button"
+            className={styles.attachBtn}
+            onClick={() => setShowEmoji(s => !s)}
+            title="Emoji"
+            aria-expanded={showEmoji}
+            aria-label="Open emoji picker"
+          >
+            <span style={{ fontSize: 16 }}>😊</span>
+          </button>
+          {showEmoji && (
+            <EmojiPicker
+              onSelect={(e) => setText(t => t + e)}
+              onClose={() => setShowEmoji(false)}
+            />
+          )}
+        </div>
         <textarea
           className={styles.input}
           value={text}
