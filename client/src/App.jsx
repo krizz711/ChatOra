@@ -9,6 +9,8 @@ import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import FriendsList from './pages/FriendsList';
+import Settings from './pages/Settings';
 
 // Theme is now enforced as dark-only via index.css
 
@@ -58,6 +60,8 @@ export default function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/" element={<PrivateRoute><Home /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+            <Route path="/friends" element={<PrivateRoute><FriendsList /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>

@@ -12,6 +12,7 @@ import IncomingCall from '../components/IncomingCall';
 import CallingScreen from '../components/CallingScreen';
 import SplashScreen from '../components/SplashScreen';
 import styles from './Home.module.css';
+import PageBack from '../components/PageBack';
 
 export default function Home() {
   const { user } = useAuth();
@@ -201,10 +202,10 @@ export default function Home() {
           />
         ) : mobileView === 'room' ? (
           <div className={styles.mobileChatView}>
-            <div className={styles.mobileBackBar}>
-              <button onClick={() => { setMobileView('list'); setActiveRoom(null); }}>&larr; Back</button>
-              <div style={{ fontWeight: 700 }}>{activeRoom?.name || 'Room'}</div>
-            </div>
+            <header className={styles.mobileBackBar}>
+              <PageBack label="Chats" onClick={() => { setMobileView('list'); setActiveRoom(null); }} />
+              <h1 className={styles.mobileChatTitle}>{activeRoom?.name || 'Room'}</h1>
+            </header>
             {activeRoom && (
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <ChatRoom key={activeRoom.id} room={activeRoom} onUserClick={handleUserClick} />
@@ -213,10 +214,10 @@ export default function Home() {
           </div>
         ) : (
           <div className={styles.mobileChatView}>
-            <div className={styles.mobileBackBar}>
-              <button onClick={() => { setMobileView('list'); closeChat(); setPrivateChatUser(null); }}>&larr; Back</button>
-              <div style={{ fontWeight: 700 }}>{privateChatUser?.username || 'Direct Message'}</div>
-            </div>
+            <header className={styles.mobileBackBar}>
+              <PageBack label="Chats" onClick={() => { setMobileView('list'); closeChat(); setPrivateChatUser(null); }} />
+              <h1 className={styles.mobileChatTitle}>{privateChatUser?.username || 'Direct Message'}</h1>
+            </header>
             <div style={{ flex: 1, overflow: 'hidden' }}>
               {activeChat && privateChatUser && (
                 <PrivateChat

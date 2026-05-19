@@ -47,3 +47,22 @@ export const declineFriendRequest = (requestId) => api.post(`/friends/decline/${
 export const unfriend = (userId) => api.delete(`/friends/${userId}`).then(r => r.data);
 export const checkFriendship = (userId) => api.get(`/friends/check/${userId}`).then(r => r.data);
 export const updateCallSettings = (settings) => api.put('/friends/settings', settings).then(r => r.data);
+
+export const fetchFriendsForUser = (userId) =>
+  api.get(`/friends/list/${userId}`).then(r => r.data);
+
+export const fetchUserProfile = (userId) =>
+  api.get(`/auth/users/${userId}`).then(r => r.data);
+
+export const fetchSettings = () => api.get('/settings').then(r => r.data);
+
+export const updateSettings = (settings) => api.put('/settings', settings).then(r => r.data);
+
+export const sendHelpMessage = (message) =>
+  api.post('/settings/help', { message }).then(r => r.data);
+
+export const blockUser = (userId) =>
+  api.post(`/settings/block/${userId}`).then(r => r.data);
+
+export const unblockUser = (userId) =>
+  api.delete(`/settings/block/${userId}`).then(r => r.data);

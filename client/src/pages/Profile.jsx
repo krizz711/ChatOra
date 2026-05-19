@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload } from 'lucide-react';
+import PageBack from '../components/PageBack';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile, uploadAvatar } from '../utils/api';
+import { updateProfile, uploadAvatar, blockUser } from '../utils/api';
 import { getStoredToken } from '../utils/token';
 import axios from 'axios';
 import styles from './Profile.module.css';
@@ -27,6 +28,7 @@ export default function Profile() {
   const [viewingUser, setViewingUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [friendsList, setFriendsList] = useState([]);
+  const [friendsHidden, setFriendsHidden] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
     username: user?.username || '',
@@ -87,8 +89,20 @@ export default function Profile() {
       const token = getStoredToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       axios.get(`${SERVER}/api/friends/list/${target.id}`, { headers })
-        .then(r => setFriendsList(r.data))
-        .catch(err => setFriendsList([]));
+        .then(r => {
+          const data = r.data;
+          if (data?.hidden) {
+            setFriendsHidden(true);
+            setFriendsList([]);
+          } else {
+            setFriendsHidden(false);
+            setFriendsList(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch(() => {
+          setFriendsHidden(false);
+          setFriendsList([]);
+        });
     } else {
       setFriendsList([]);
     }
@@ -133,9 +147,7 @@ export default function Profile() {
     return (
       <div className={styles.page}>
         <motion.div className={styles.card} initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}>
-          <button className={styles.backBtn} onClick={() => navigate('/')}>
-            <ArrowLeft size={14} /> Back to chat
-          </button>
+          <PageBack label="Back to chat" onClick={() => navigate('/')} className={styles.backBtnWrap} />
           <div className={styles.sectionTitle} style={{ marginTop: 16 }}>Guest Session</div>
           <div>
             <p>You're chatting as <strong>{user.username}</strong> (guest).</p>
@@ -160,9 +172,7 @@ export default function Profile() {
         initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
 
-        <button className={styles.backBtn} onClick={() => navigate(-1)}>
-          <ArrowLeft size={14} /> Back
-        </button>
+        <PageBack label="Back" onClick={() => navigate(-1)} className={styles.backBtnWrap} />
 
         {msg && <div className={styles.successMsg}>{msg}</div>}
         {error && <div className={styles.errorMsg}>{error}</div>}
@@ -209,6 +219,25 @@ export default function Profile() {
                 <FlairBadge key={f.id} flair={f} />
               ))}
             </div>
+
+            {!isMe && !user?.isGuest && (
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnSm}`}
+                style={{ color: 'var(--red)', borderColor: 'var(--red)', marginTop: 4 }}
+                onClick={async () => {
+                  if (!window.confirm(`Block ${target.username}? They will not be able to interact with you.`)) return;
+                  try {
+                    await blockUser(target.id);
+                    setMsg('User blocked. Manage blocked users in Settings.');
+                  } catch {
+                    setError('Could not block user. Run the latest database migration if needed.');
+                  }
+                }}
+              >
+                Block user
+              </button>
+            )}
 
             {isMe && (
               <div className={styles.headerActions}>
@@ -330,13 +359,22 @@ export default function Profile() {
                 +{friendsList.length - 3}
               </div>
             )}
-            {friendsList.length === 0 && (
+            {friendsList.length === 0 && !friendsHidden && (
               <div style={{ fontSize: 13, color: 'var(--text2)', marginLeft: 8 }}>No friends yet.</div>
             )}
+            {friendsHidden && !isMe && (
+              <div style={{ fontSize: 13, color: 'var(--text2)', marginLeft: 8 }}>Friends list is private</div>
+            )}
           </div>
-          <button className={styles.viewAllBtn}>
-            View All <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
-          </button>
+          {(isMe || !friendsHidden) && (
+            <button
+              type="button"
+              className={styles.viewAllBtn}
+              onClick={() => navigate(isMe ? '/friends' : `/friends?user=${target.id}`)}
+            >
+              View All <ArrowLeft size={14} style={{ transform: 'rotate(180deg)' }} />
+            </button>
+          )}
         </div>
 
       </motion.div>

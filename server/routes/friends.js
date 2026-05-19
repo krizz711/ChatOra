@@ -95,6 +95,19 @@ router.get('/', async (req, res) => {
 router.get('/list/:userId', async (req, res) => {
     try {
         const targetId = sanitizeUuid(req.params.userId, 'userId');
+
+        const { hasUsersColumn } = require('../db/userColumns');
+        if (targetId !== req.user.id && await hasUsersColumn('friends_list_hidden')) {
+            const { data: targetUser } = await supabase
+                .from('users')
+                .select('friends_list_hidden')
+                .eq('id', targetId)
+                .maybeSingle();
+            if (targetUser?.friends_list_hidden) {
+                return res.json({ hidden: true, friends: [] });
+            }
+        }
+
         const { data: friendships, error } = await supabase
             .from('friendships')
             .select(`id, friends_since, user_a_id, user_b_id`)
@@ -333,11 +346,19 @@ router.delete('/:userId', async (req, res) => {
 router.put('/settings', async (req, res) => {
     if (req.user.isGuest) return res.status(403).json({ error: 'Guests cannot update settings' });
 
-    const { calls_enabled, notification_sound } = req.body;
+    const { calls_enabled, notification_sound, friends_list_hidden } = req.body;
+    const { hasUsersColumn } = require('../db/userColumns');
     const updateData = {};
     try {
-        if (calls_enabled !== undefined) updateData.calls_enabled = sanitizeBoolean(calls_enabled, 'calls_enabled');
-        if (notification_sound !== undefined) updateData.notification_sound = sanitizeBoolean(notification_sound, 'notification_sound');
+        if (calls_enabled !== undefined && await hasUsersColumn('calls_enabled')) {
+            updateData.calls_enabled = sanitizeBoolean(calls_enabled, 'calls_enabled');
+        }
+        if (notification_sound !== undefined && await hasUsersColumn('notification_sound')) {
+            updateData.notification_sound = sanitizeBoolean(notification_sound, 'notification_sound');
+        }
+        if (friends_list_hidden !== undefined && await hasUsersColumn('friends_list_hidden')) {
+            updateData.friends_list_hidden = sanitizeBoolean(friends_list_hidden, 'friends_list_hidden');
+        }
     } catch (err) {
         return handleValidationError(res, err);
     }

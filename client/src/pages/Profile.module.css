@@ -26,23 +26,9 @@
 }
 
 /* Base bits */
-.backBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  color: var(--text2);
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 8px 0;
-  margin-bottom: -10px;
-  transition: color 0.15s;
-}
-
-.backBtn:hover {
-  color: var(--accent);
+.backBtnWrap {
+  align-self: flex-start;
+  margin-bottom: -4px;
 }
 
 .sectionTitle {

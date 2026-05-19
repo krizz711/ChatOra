@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import axios from 'axios';
 import { initSocket, disconnectSocket } from '../socket';
 import { clearStoredToken, getStoredToken, setStoredToken } from '../utils/token';
+import { setNotificationSoundEnabled } from '../utils/notifications';
 
 const AuthContext = createContext(null);
 
@@ -24,7 +25,11 @@ export const AuthProvider = ({ children }) => {
     try {
       if (authToken) axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
       const res = await axios.get(`${SERVER}/api/auth/me`);
-      setUser(res.data.user);
+      const me = res.data.user;
+      setUser(me);
+      if (me?.notification_sound !== undefined) {
+        setNotificationSoundEnabled(me.notification_sound !== false);
+      }
       initSocket(authToken);
     } catch (err) {
       // If we fail to fetch the current user (invalid token), ensure we log out locally
@@ -88,7 +93,7 @@ export const AuthProvider = ({ children }) => {
   // Previously logout was a simple function; keep it but ensure it's the same stable callback
   // exported above so other hooks can depend on it.
 
-  const updateUser = (updated) => setUser(updated);
+  const updateUser = (updated) => setUser((prev) => (prev ? { ...prev, ...updated } : updated));
 
   // Cross-tab logout sync
   useEffect(() => {
