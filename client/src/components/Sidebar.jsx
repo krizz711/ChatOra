@@ -35,7 +35,9 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [genderFilter, setGenderFilter] = useState('all');
-  const [userSort, setUserSort] = useState('popularity');
+  const [sortNearest, setSortNearest] = useState(true);
+  const [sortPopularity, setSortPopularity] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   useEffect(() => { loadGroups(); loadFriends(); }, [user]);
   useEffect(() => { if (activePanel === 'friends') loadFriends(); }, [activePanel]);
   useEffect(() => {
@@ -151,14 +153,17 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
           .some(value => value.toLowerCase().includes(q));
       })
       .sort((a, b) => {
-        if (userSort === 'nearest') {
+        if (sortNearest) {
           const byLocation = sameLocationRank(b) - sameLocationRank(a);
-          if (byLocation) return byLocation;
+          if (byLocation !== 0) return byLocation;
         }
-        if (userSort === 'name') return (a.username || '').localeCompare(b.username || '');
-        return (b.stars || 0) - (a.stars || 0);
+        if (sortPopularity) {
+          const byStars = (b.stars || 0) - (a.stars || 0);
+          if (byStars !== 0) return byStars;
+        }
+        return (a.username || '').localeCompare(b.username || '');
       });
-  }, [onlineUsers, userSearch, genderFilter, userSort, user?.country, user?.state]);
+  }, [onlineUsers, userSearch, genderFilter, sortNearest, sortPopularity, user?.country, user?.state]);
 
   return (
     <div className={styles.sidebar}>
@@ -197,33 +202,20 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
         </div>
       </div>
 
-      <div className={styles.tabs}>
-        <button className={`${styles.tabBtn} ${activePanel === 'active' ? styles.tabActive : ''}`} onClick={() => onSetActivePanel('active')}>
-          Active
-        </button>
-        <button className={`${styles.tabBtn} ${activePanel === 'rooms' ? styles.tabActive : ''}`} onClick={() => onSetActivePanel('rooms')}>
-          Rooms
-        </button>
-        <button
-          className={`${styles.tabBtn} ${activePanel === 'friends' ? styles.tabActive : ''}`}
-          onClick={() => { onSetActivePanel('friends'); setRequestCount(0); }}
-        >
+      <div className={styles.glassRadioGroup}>
+        <input type="radio" value="active" id="panel-active" name="sidebar-panel" className={styles.radioInput} checked={activePanel === 'active'} onChange={() => onSetActivePanel('active')} />
+        <label htmlFor="panel-active" className={styles.glassRadioLabel}>Active</label>
+
+        <input type="radio" value="rooms" id="panel-rooms" name="sidebar-panel" className={styles.radioInput} checked={activePanel === 'rooms'} onChange={() => onSetActivePanel('rooms')} />
+        <label htmlFor="panel-rooms" className={styles.glassRadioLabel}>Rooms</label>
+
+        <input type="radio" value="friends" id="panel-friends" name="sidebar-panel" className={styles.radioInput} checked={activePanel === 'friends'} onChange={() => { onSetActivePanel('friends'); setRequestCount(0); }} />
+        <label htmlFor="panel-friends" className={styles.glassRadioLabel}>
           Friends
-          {requestCount > 0 && (
-            <span style={{
-              marginLeft: 6,
-              background: 'var(--red)',
-              color: '#fff',
-              borderRadius: '99px',
-              fontSize: 10,
-              fontWeight: 800,
-              padding: '1px 6px',
-              lineHeight: '16px',
-            }}>
-              {requestCount}
-            </span>
-          )}
-        </button>
+          {requestCount > 0 && <span className={styles.requestBadge}>{requestCount}</span>}
+        </label>
+
+        <div className={styles.glassGlider} />
       </div>
 
       <div className={styles.scroll}>
@@ -379,45 +371,70 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
         {/* Online Users */}
         {activePanel === 'active' && (
           <div className={styles.section}>
-            <div className={styles.sectionLabel}>Active Users - {onlineUsers?.length || 0}</div>
-            <a
-              href="https://go.nordvpn.net/YOUR_AFFILIATE_LINK"
-              target="_blank"
-              rel="noopener noreferrer sponsored"
-              style={{
-                display: 'block',
-                padding: '10px 12px',
-                marginBottom: 8,
-                borderRadius: 10,
-                border: '1px solid var(--border)',
-                background: 'var(--surface2)',
-                fontSize: 12,
-                color: 'var(--text2)',
-                textDecoration: 'none',
-              }}
-            >
-              <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text3)', display: 'block', marginBottom: 2 }}>Sponsored</span>
-              Stay private while chatting — NordVPN
-            </a>
+            <div className={styles.sectionLabel}>Active Users ({onlineUsers?.length || 0})</div>
             <div className={styles.userFilters}>
-              <input
-                value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
-                placeholder="Search active users"
-              />
-              <div className={styles.filterRow}>
-                <select value={userSort} onChange={e => setUserSort(e.target.value)}>
-                  <option value="popularity">Most starred</option>
-                  <option value="nearest">Nearest</option>
-                  <option value="name">Name</option>
-                </select>
-                <select value={genderFilter} onChange={e => setGenderFilter(e.target.value)}>
-                  <option value="all">All genders</option>
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="other">Other</option>
-                </select>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  value={userSearch}
+                  onChange={e => setUserSearch(e.target.value)}
+                  placeholder="Search active users"
+                  style={{ flex: 1 }}
+                />
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`${styles.iconBtn} ${showFilters ? styles.filterToggleBtnActive : ''}`}
+                  style={{
+                    border: '1px solid var(--border)',
+                    borderRadius: '10px',
+                    width: '36px',
+                    height: '36px',
+                    flexShrink: 0,
+                    padding: 0
+                  }}
+                  title="Toggle Filters"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                  </svg>
+                </button>
               </div>
+
+              {showFilters && (
+                <div className={styles.filterExpanded}>
+                  <div className={styles.filterGroup}>
+                    <div className={styles.filterLabel}>GENDER</div>
+                    <div className={styles.filterChips}>
+                      {['all', 'female', 'male', 'other'].map(g => (
+                        <button
+                          key={g}
+                          onClick={() => setGenderFilter(g)}
+                          className={`${styles.filterChip} ${genderFilter === g ? styles.filterChipActive : ''}`}
+                        >
+                          {g === 'all' ? 'All' : g.charAt(0).toUpperCase() + g.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className={styles.filterGroup}>
+                    <div className={styles.filterLabel}>SORT BY</div>
+                    <div className={styles.filterChips}>
+                      <button
+                        onClick={() => setSortNearest(!sortNearest)}
+                        className={`${styles.filterChip} ${sortNearest ? styles.filterChipActive : ''}`}
+                      >
+                        Nearest
+                      </button>
+                      <button
+                        onClick={() => setSortPopularity(!sortPopularity)}
+                        className={`${styles.filterChip} ${sortPopularity ? styles.filterChipActive : ''}`}
+                      >
+                        Most Starred
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {filteredOnlineUsers.length === 0 && (

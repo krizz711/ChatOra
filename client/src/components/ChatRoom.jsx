@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import styles from './ChatRoom.module.css';
 
 const MessageRow = memo(({ msg, isMine, showAvatar, user, onUserClick, onReply, styles }) => {
-  const sender = msg.sender || {};
+  const sender = isMine ? user : (msg.sender || {});
   const glowClass = sender.gender === 'female' ? styles.glowFemale : sender.gender === 'male' ? styles.glowMale : styles.glowNeutral;
   const fmtSize = (bytes) => bytes > 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${(bytes / 1024).toFixed(0)}KB`;
   const isImage = (type) => type?.startsWith('image/');
@@ -119,7 +119,7 @@ function ChatRoom({ room, onUserClick }) {
     else sendTypingStop();
   };
 
-  
+
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -140,7 +140,7 @@ function ChatRoom({ room, onUserClick }) {
     finally { setUploading(false); fileRef.current.value = ''; }
   };
 
-  
+
 
   return (
     <div className={styles.room}>

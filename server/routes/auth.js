@@ -8,6 +8,18 @@ const passport = require('../config/passport');
 const rateLimit = require('express-rate-limit');
 const { getUserColumns, stripUnsupportedUserFields, hasUsersColumn } = require('../db/userColumns');
 
+// Dedicated auth rate limiter — much stricter than global
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// UUID format validator
+const isValidId = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+
 const normalizeGender = (value) => {
   const gender = String(value || 'other').toLowerCase();
   return ['female', 'male', 'other'].includes(gender) ? gender : 'other';
@@ -170,7 +182,7 @@ router.post('/guest', guestLimiter, async (req, res) => {
 });
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   const { username, email, password, country, state, gender, age } = req.body;
   if (!username || !email || !password)
     return res.status(400).json({ error: 'All fields required' });
@@ -179,11 +191,15 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
   try {
-    // Check if username or email taken
+    // Sanitize inputs before interpolation into .or()
+    const safeUsername = username.trim().replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 30);
+    const safeEmail = email.trim().replace(/[^a-zA-Z0-9@._+\-]/g, '').slice(0, 100);
+    if (!safeUsername || !safeEmail) return res.status(400).json({ error: 'Invalid username or email format' });
+
     const { data: existing } = await supabase
       .from('users')
       .select('id')
-      .or(`username.eq.${username},email.eq.${email}`)
+      .or(`username.eq.${safeUsername},email.eq.${safeEmail}`)
       .maybeSingle();
 
     if (existing) return res.status(409).json({ error: 'Username or email already taken' });
@@ -206,7 +222,7 @@ router.post('/register', async (req, res) => {
 
     if (error) throw error;
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ user, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -214,7 +230,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { email, password, country, state, gender, age } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: 'Email and password required' });
@@ -254,7 +270,7 @@ router.post('/login', async (req, res) => {
       safeUser = rest;
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ user: safeUser, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -315,6 +331,7 @@ router.post('/star/:userId', authMiddleware, async (req, res) => {
   if (!userId) return res.status(400).json({ error: 'Target user is required' });
   if (userId.startsWith('guest_')) return res.status(400).json({ error: 'Cannot star a guest user' });
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot star yourself' });
+  if (!isValidId(userId)) return res.status(400).json({ error: 'Invalid user ID format' });
 
   try {
     const { data: target, error: targetErr } = await supabase
@@ -433,6 +450,7 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
 router.get('/users/:userId', async (req, res) => {
   const { userId } = req.params;
   if (!userId) return res.status(400).json({ error: 'User ID required' });
+  if (!isValidId(userId)) return res.status(400).json({ error: 'Invalid user ID format' });
 
   try {
     const { data: user, error } = await supabase

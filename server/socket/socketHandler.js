@@ -3,21 +3,72 @@ const supabase = require('../db/supabase');
 const { v4: uuidv4 } = require('uuid');
 const { getUserColumns } = require('../db/userColumns');
 
-// Simple profanity filter - add words as needed
-const BAD_WORDS = ['spam', 'scam']; // extend as needed
+// ─── PROFANITY FILTER ────────────────────────────────────────────
+const BAD_WORDS = [
+  'spam', 'scam', 'nigger', 'nigga', 'faggot', 'retard',
+  'slut', 'whore', 'bitch', 'asshole', 'dickhead', 'cunt',
+];
+const BAD_PATTERNS = BAD_WORDS.map(w => {
+  // Match leetspeak: a->@/4, e->3, i->1/!, o->0, s->$/5
+  const leet = w.replace(/a/gi, '[a@4]').replace(/e/gi, '[e3]')
+    .replace(/i/gi, '[i1!]').replace(/o/gi, '[o0]').replace(/s/gi, '[s$5]');
+  // Allow spaces/dots between chars
+  return new RegExp(leet.split('').join('[\\s._-]*'), 'gi');
+});
 const filterMessage = (text) => {
   let filtered = text;
-  BAD_WORDS.forEach(word => {
-    const re = new RegExp(word, 'gi');
-    filtered = filtered.replace(re, '*'.repeat(word.length));
+  BAD_PATTERNS.forEach(re => {
+    filtered = filtered.replace(re, m => '*'.repeat(m.replace(/[\s._-]/g, '').length));
   });
   return filtered;
 };
 
+// ─── XSS SANITIZER ───────────────────────────────────────────────
 const sanitize = (str) => {
   if (typeof str !== 'string') return '';
-  return str.replace(/<[^>]*>/g, '').trim().slice(0, 2000);
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim()
+    .slice(0, 2000);
 };
+
+// ─── SOCKET RATE LIMITER ─────────────────────────────────────────
+const rateBuckets = new Map();
+const RATE_LIMITS = {
+  'message:send': { max: 20, windowMs: 60000 },
+  'message:file': { max: 10, windowMs: 60000 },
+  'private:send': { max: 30, windowMs: 60000 },
+  'private:history': { max: 15, windowMs: 60000 },
+  'typing:start': { max: 30, windowMs: 60000 },
+  'room:join': { max: 20, windowMs: 60000 },
+  'users:online': { max: 10, windowMs: 60000 },
+  'call:offer': { max: 5, windowMs: 60000 },
+};
+const checkRate = (socketId, event) => {
+  const cfg = RATE_LIMITS[event];
+  if (!cfg) return true;
+  const key = `${socketId}:${event}`;
+  const now = Date.now();
+  let bucket = rateBuckets.get(key);
+  if (!bucket || now > bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + cfg.windowMs };
+    rateBuckets.set(key, bucket);
+  }
+  bucket.count++;
+  return bucket.count <= cfg.max;
+};
+// Periodic cleanup of stale rate limit buckets
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateBuckets) {
+    if (now > bucket.resetAt) rateBuckets.delete(key);
+  }
+}, 120000);
 
 const buildSender = (user) => ({
   id: user.id,
@@ -160,6 +211,24 @@ const cleanupExpiredRoomMessages = async (roomId) => {
   }
 };
 
+// ─── INTERVAL-BASED CLEANUP (replaces per-message cleanup) ───────
+const cleanedRooms = new Map(); // roomId -> lastCleanedAt
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const maybeCleanupRoom = async (roomId) => {
+  const now = Date.now();
+  const lastCleaned = cleanedRooms.get(roomId) || 0;
+  if (now - lastCleaned < CLEANUP_INTERVAL_MS) return;
+  cleanedRooms.set(roomId, now);
+  await cleanupExpiredRoomMessages(roomId);
+};
+// Global cleanup every 10 min to sweep stale room entries
+setInterval(() => {
+  const now = Date.now();
+  for (const [roomId, ts] of cleanedRooms) {
+    if (now - ts > 30 * 60 * 1000) cleanedRooms.delete(roomId);
+  }
+}, 10 * 60 * 1000);
+
 const fetchRoomHistory = async (roomId) => {
   const baseQuery = () => supabase
     .from('messages')
@@ -247,9 +316,15 @@ const storePrivateMessage = async (message, recipient) => {
   }
 };
 
+// ─── CACHED USER LIST (avoid re-serializing on every poll) ───────
+let cachedUserList = null;
+let cachedUserListAt = 0;
+const USER_LIST_CACHE_MS = 3000; // 3 second cache
+
 const handler = (io) => {
-  // Track typing timeouts
+  // Track typing timeouts (with size guard)
   const typingTimeouts = new Map();
+  const MAX_TYPING_ENTRIES = 5000;
 
   io.on('connection', async (socket) => {
     const user = socket.user;
@@ -272,9 +347,10 @@ const handler = (io) => {
     // ─── JOIN ROOM ──────────────────────────────────────────────
     socket.on('room:join', async ({ roomId }) => {
       if (!roomId) return;
+      if (!checkRate(socket.id, 'room:join')) return socket.emit('error', { message: 'Too many requests, slow down' });
       socket.join(roomId);
 
-      await cleanupExpiredRoomMessages(roomId);
+      await maybeCleanupRoom(roomId);
       const history = await fetchRoomHistory(roomId);
       if (Array.isArray(history)) socket.emit('message:history', { roomId, messages: history });
 
@@ -295,6 +371,7 @@ const handler = (io) => {
     // ─── SEND MESSAGE TO ROOM ────────────────────────────────────
     socket.on('message:send', async ({ roomId, text, replyTo }) => {
       if (!roomId || !text) return;
+      if (!checkRate(socket.id, 'message:send')) return socket.emit('message:error', { error: 'You are sending messages too fast. Slow down.' });
 
       const clean = filterMessage(sanitize(text));
       if (!clean) return;
@@ -309,7 +386,7 @@ const handler = (io) => {
         type: 'text',
       };
 
-      await cleanupExpiredRoomMessages(roomId);
+      await maybeCleanupRoom(roomId);
       const insertError = await insertRoomMessage({
         id: message.id,
         room_id: roomId,
@@ -331,6 +408,7 @@ const handler = (io) => {
     // ─── SEND FILE/IMAGE IN ROOM ─────────────────────────────────
     socket.on('message:file', async ({ roomId, fileUrl, fileName, fileType, fileSize }) => {
       if (!roomId || !fileUrl) return;
+      if (!checkRate(socket.id, 'message:file')) return socket.emit('message:error', { error: 'Too many file uploads. Slow down.' });
 
       const { data: group } = await supabase.from('groups').select('is_global').eq('id', roomId).single();
       if (group?.is_global) {
@@ -353,7 +431,7 @@ const handler = (io) => {
         type: 'file',
       };
 
-      await cleanupExpiredRoomMessages(roomId);
+      await maybeCleanupRoom(roomId);
       const insertError = await insertRoomMessage({
         id: message.id,
         room_id: roomId,
@@ -376,6 +454,7 @@ const handler = (io) => {
     // ─── TYPING INDICATOR ────────────────────────────────────────
     socket.on('typing:start', ({ roomId }) => {
       if (!roomId) return;
+      if (!checkRate(socket.id, 'typing:start')) return;
       socket.to(roomId).emit('typing:update', {
         userId: user.id,
         username: user.username,
@@ -383,9 +462,10 @@ const handler = (io) => {
         typing: true,
       });
 
-      // Auto-clear typing after 3s
+      // Auto-clear typing after 3s (with size guard)
       const key = `${user.id}:${roomId}`;
       if (typingTimeouts.has(key)) clearTimeout(typingTimeouts.get(key));
+      if (typingTimeouts.size >= MAX_TYPING_ENTRIES) return;
       typingTimeouts.set(key, setTimeout(() => {
         socket.to(roomId).emit('typing:update', {
           userId: user.id, username: user.username, roomId, typing: false,
@@ -409,12 +489,14 @@ const handler = (io) => {
     // ─── PRIVATE MESSAGES ────────────────────────────────────────
     socket.on('private:history', async ({ withUserId }) => {
       if (!withUserId) return;
+      if (!checkRate(socket.id, 'private:history')) return socket.emit('private:history', { withUserId, messages: [] });
 
       try {
+        // Use separate filter conditions instead of string interpolation
         const { data, error } = await supabase
           .from('private_messages')
           .select('*')
-          .or(`and(sender_key.eq.${user.id},recipient_key.eq.${withUserId}),and(sender_key.eq.${withUserId},recipient_key.eq.${user.id})`)
+          .or(`and(sender_key.eq.${user.id},recipient_key.eq.${String(withUserId).replace(/[^a-zA-Z0-9_-]/g, '')}),and(sender_key.eq.${String(withUserId).replace(/[^a-zA-Z0-9_-]/g, '')},recipient_key.eq.${user.id})`)
           .order('created_at', { ascending: false })
           .limit(100);
 
@@ -435,6 +517,7 @@ const handler = (io) => {
     socket.on('private:send', async ({ toUserId, text, fileUrl, fileName, fileType, ciphertext, nonce, encrypted }) => {
       // Accept either plaintext text OR ciphertext payload. Do not touch ciphertext.
       if (!toUserId || (!text && !fileUrl && !ciphertext)) return;
+      if (!checkRate(socket.id, 'private:send')) return socket.emit('message:error', { error: 'You are sending messages too fast. Slow down.' });
 
       const isEncrypted = !!encrypted && !!ciphertext;
       const safeText = isEncrypted ? '' : (text ? filterMessage(sanitize(text)) : '');
@@ -508,8 +591,19 @@ const handler = (io) => {
 
     // ─── GET ONLINE USERS ────────────────────────────────────────
     socket.on('users:online', async () => {
+      if (!checkRate(socket.id, 'users:online')) return;
+
+      // Serve from cache if fresh enough
+      const now = Date.now();
+      if (cachedUserList && (now - cachedUserListAt) < USER_LIST_CACHE_MS) {
+        socket.emit('users:list', cachedUserList);
+        return;
+      }
+
       const memoryUsers = listActiveUsers();
       if (memoryUsers.length) {
+        cachedUserList = memoryUsers;
+        cachedUserListAt = now;
         socket.emit('users:list', memoryUsers);
         return;
       }
@@ -532,6 +626,8 @@ const handler = (io) => {
           await Promise.all(invalidKeys.map(key => redis.hdel('online_users', key)));
         }
 
+        cachedUserList = users;
+        cachedUserListAt = now;
         socket.emit('users:list', users);
       } catch (err) {
         console.error('Failed to read Redis presence:', err.message);
@@ -541,6 +637,7 @@ const handler = (io) => {
 
     socket.on('call:offer', async ({ toUserId, offer, callType }) => {
       if (!toUserId || !offer) return;
+      if (!checkRate(socket.id, 'call:offer')) return socket.emit('call:error', { message: 'Too many call attempts' });
       if (user.isGuest) return socket.emit('call:error', { message: 'Guests cannot make calls' });
       const { data: target } = await supabase.from('users').select('id, calls_enabled').eq('id', toUserId).maybeSingle();
       if (!target) return socket.emit('call:error', { message: 'User not found' });
