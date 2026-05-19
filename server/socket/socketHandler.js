@@ -125,16 +125,24 @@ const safeParseUser = (raw) => {
 
 const activeUsers = new Map();
 
-const publicUser = (user) => ({
-  id: user.id,
-  username: user.username,
-  avatar_url: user.avatar_url,
-  country: user.country || null,
-  state: user.state || null,
-  gender: user.gender || 'other',
-  age: user.age || null,
-  star_count: user.star_count || 0,
-});
+const { withOwnerFlag } = require('../utils/owner');
+
+const publicUser = (user) => {
+  const u = withOwnerFlag(user);
+  return {
+    id: u.id,
+    username: u.username,
+    avatar_url: u.avatar_url,
+    country: u.country || null,
+    state: u.state || null,
+    gender: u.gender || 'other',
+    age: u.age || null,
+    star_count: u.star_count || 0,
+    is_owner: Boolean(u.is_owner),
+    flair: u.flair || null,
+    flairs: Array.isArray(u.flairs) ? u.flairs : (u.flair ? [u.flair] : []),
+  };
+};
 
 const addActiveSocket = (user, socketId) => {
   const existing = activeUsers.get(user.id);

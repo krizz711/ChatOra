@@ -170,7 +170,7 @@ export default function Settings() {
             <section className={styles.section}>
               <h2 className={styles.sectionTitle}>Help & support</h2>
               <p className={styles.muted}>
-                Send a message to the NexChat team. It goes to our support inbox.
+                Send a message to the ChatOra team. It goes to our support inbox.
               </p>
               <form onSubmit={handleHelp} className={styles.helpForm}>
                 <textarea

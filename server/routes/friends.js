@@ -1,6 +1,7 @@
 const express = require('express');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const supabase = require('../db/supabase');
+const { withOwnerFlag } = require('../utils/owner');
 const { getActiveUser } = require('../socket/socketHandler');
 const {
     handleValidationError,
@@ -70,11 +71,14 @@ router.get('/', async (req, res) => {
 
         const { data: friendUsers } = friendIds.length ? await supabase
             .from('users')
-            .select('id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled')
+            .select('id, username, avatar_url, bio, star_count, country, state, gender, age, calls_enabled, is_owner, email')
             .in('id', friendIds) : { data: [] };
 
         const userMap = {};
-        (friendUsers || []).forEach(u => { userMap[u.id] = u; });
+        (friendUsers || []).forEach(u => {
+            const { email, ...publicUser } = withOwnerFlag(u);
+            userMap[u.id] = publicUser;
+        });
 
         const friendsList = friendships.map(f => {
             const friendId = f.user_a_id === req.user.id ? f.user_b_id : f.user_a_id;
@@ -125,11 +129,14 @@ router.get('/list/:userId', async (req, res) => {
 
         const { data: friendUsers } = friendIds.length ? await supabase
             .from('users')
-            .select('id, username, avatar_url, bio, star_count, country, state, gender, age')
+            .select('id, username, avatar_url, bio, star_count, country, state, gender, age, is_owner, email')
             .in('id', friendIds) : { data: [] };
 
         const userMap = {};
-        (friendUsers || []).forEach(u => { userMap[u.id] = u; });
+        (friendUsers || []).forEach(u => {
+            const { email, ...publicUser } = withOwnerFlag(u);
+            userMap[u.id] = publicUser;
+        });
 
         const friendsList = friendships.map(f => {
             const friendId = f.user_a_id === targetId ? f.user_b_id : f.user_a_id;

@@ -7,6 +7,13 @@ const { upload, cloudinary } = require('../config/cloudinary');
 const passport = require('../config/passport');
 const rateLimit = require('express-rate-limit');
 const { getUserColumns, stripUnsupportedUserFields, hasUsersColumn } = require('../db/userColumns');
+const { withOwnerFlag } = require('../utils/owner');
+const {
+  sanitizeChosenFlair,
+  sanitizeFlairsList,
+  normalizeFlairsArray,
+  toggleChosenFlair,
+} = require('../utils/flairs');
 const {
   handleValidationError,
   sanitizeAge,
@@ -61,7 +68,7 @@ router.get('/google', (req, res, next) => {
   const state = require('crypto').randomBytes(16).toString('hex');
   const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 };
   if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
-  res.cookie('nexchat_oauth_state', state, cookieOpts);
+  res.cookie('chatora_oauth_state', state, cookieOpts);
   passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
 });
 
@@ -75,15 +82,15 @@ router.get('/google/callback', (req, res, next) => {
     const safeStateQuery = sanitizeString(String(stateQuery || ''), { field: 'state', min: 8, max: 64, pattern: /^[a-f0-9]+$/i });
     if (safeStateCookie !== safeStateQuery) {
       // Clear cookie and abort
-      res.clearCookie('nexchat_oauth_state');
+      res.clearCookie('chatora_oauth_state');
       return res.redirect(`${CLIENT}/login?error=csrf`);
     }
   } catch {
-    res.clearCookie('nexchat_oauth_state');
+    res.clearCookie('chatora_oauth_state');
     return res.redirect(`${CLIENT}/login?error=csrf`);
   }
   // Clear state cookie after validation
-  res.clearCookie('nexchat_oauth_state');
+  res.clearCookie('chatora_oauth_state');
 
   passport.authenticate('google', { session: false }, (err, user, info) => {
     if (err) {
@@ -109,7 +116,7 @@ router.get('/google/callback', (req, res, next) => {
     // Set short-lived httpOnly cookie with the JWT instead of exposing it in the URL
     const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 5 * 60 * 1000 };
     if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
-    res.cookie('nexchat_oauth_token', token, cookieOpts);
+    res.cookie('chatora_oauth_token', token, cookieOpts);
 
     // Redirect to client callback WITHOUT token in URL
     return res.redirect(`${CLIENT}/auth/callback`);
@@ -141,7 +148,7 @@ router.get('/oauth-token', async (req, res) => {
     if (error || !user) return res.status(401).json({ error: 'invalid_token' });
 
     // Clear the cookie now that token is exchanged
-    res.clearCookie('nexchat_oauth_token');
+    res.clearCookie('chatora_oauth_token');
 
     return res.json({ user, token });
   } catch (err) {
@@ -422,6 +429,55 @@ router.post('/star/:userId', authMiddleware, async (req, res) => {
   }
 });
 
+// Update profile flairs (add/toggle/remove or set full list)
+router.put('/flair', authMiddleware, async (req, res) => {
+  if (req.user.isGuest) {
+    return res.status(403).json({ error: 'Guests cannot set flairs' });
+  }
+
+  const hasFlairsCol = await hasUsersColumn('flairs');
+  const hasFlairCol = await hasUsersColumn('flair');
+  if (!hasFlairsCol && !hasFlairCol) {
+    return res.status(503).json({ error: 'Flairs are not available yet. Run the latest database migration.' });
+  }
+
+  try {
+    const current = normalizeFlairsArray(req.user);
+    let next = current;
+
+    if (req.body?.flairs !== undefined) {
+      next = sanitizeFlairsList(req.body.flairs);
+    } else if (req.body?.flair !== undefined) {
+      const action = req.body?.action === 'remove' ? 'remove' : 'toggle';
+      if (req.body.flair === null || req.body.flair === '') {
+        next = [];
+      } else {
+        next = toggleChosenFlair(current, req.body.flair, action);
+      }
+    } else {
+      return res.status(400).json({ error: 'Provide flair or flairs' });
+    }
+
+    const patch = {};
+    if (hasFlairsCol) patch.flairs = next;
+    if (hasFlairCol) patch.flair = next[0] || null;
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(patch)
+      .eq('id', req.user.id)
+      .select(await getUserColumns())
+      .single();
+
+    if (error) throw error;
+
+    const { email, password_hash, google_id, ...publicUser } = withOwnerFlag(data);
+    res.json({ user: publicUser });
+  } catch (err) {
+    return handleValidationError(res, err) || res.status(500).json({ error: err.message });
+  }
+});
+
 // Update profile
 router.put('/profile', authMiddleware, async (req, res) => {
   if (req.user.isGuest) {
@@ -495,7 +551,9 @@ router.get('/users/:userId', async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    res.json({ success: true, user });
+    const flagged = withOwnerFlag(user);
+    const { email, password_hash, google_id, ...publicUser } = flagged;
+    res.json({ success: true, user: publicUser });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

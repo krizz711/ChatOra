@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { playNotificationTone } from '../utils/notifications';
+import { playCallRing } from '../utils/notifications';
 
 export default function IncomingCall({ incomingCall, onAccept, onDecline }) {
   const playedRef = useRef(null);
@@ -8,7 +8,7 @@ export default function IncomingCall({ incomingCall, onAccept, onDecline }) {
     if (!incomingCall?.fromUserId) return;
     if (playedRef.current === incomingCall.fromUserId) return;
     playedRef.current = incomingCall.fromUserId;
-    playNotificationTone();
+    playCallRing();
   }, [incomingCall]);
 
   if (!incomingCall) return null;

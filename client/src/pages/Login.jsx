@@ -60,7 +60,7 @@ export default function Login() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.logo}>NexChat</div>
+        <div className={styles.logo}>ChatOra</div>
         <p className={styles.sub}>
           {mode === 'options' && 'Choose how to continue'}
           {mode === 'guest' && 'Continue as guest'}

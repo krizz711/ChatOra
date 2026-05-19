@@ -172,7 +172,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
     <div className={styles.sidebar}>
       {/* Header */}
       <div className={styles.header}>
-        <span className={styles.logo}>NexChat</span>
+        <span className={styles.logo}>ChatOra</span>
         <div className={styles.headerActions}>
 
           <button className={styles.iconBtn} onClick={() => navigate('/profile')} title="Profile">
@@ -370,7 +370,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                         </button>
                         <button
                           className={styles.profileSmall}
-                          onClick={e => { e.stopPropagation(); unfriend(friend.friendship_id).then(loadFriends); }}
+                          onClick={e => { e.stopPropagation(); unfriend(friend.id).then(loadFriends).catch(() => alert('Failed to remove friend')); }}
                         >
                           Unfriend
                         </button>

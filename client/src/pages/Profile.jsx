@@ -5,9 +5,15 @@ import { ArrowLeft, Upload } from 'lucide-react';
 import PageBack from '../components/PageBack';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../socket';
-import { updateProfile, uploadAvatar, blockUser } from '../utils/api';
-import { getStoredToken } from '../utils/token';
-import axios from 'axios';
+import {
+  updateProfile,
+  uploadAvatar,
+  blockUser,
+  updateFlairs,
+  fetchMe,
+  fetchUserProfile,
+  fetchFriendsForUser,
+} from '../utils/api';
 import styles from './Profile.module.css';
 import { getUserFlairs } from '../utils/flairs';
 import FlairPicker from '../components/FlairPicker';
@@ -46,7 +52,6 @@ export default function Profile() {
   const fileRef = useRef(null);
   const [showFlairPicker, setShowFlairPicker] = useState(false);
 
-  const SERVER = import.meta.env.VITE_SERVER_URL || '';
   const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
 
   useEffect(() => {
@@ -65,13 +70,9 @@ export default function Profile() {
     const userId = searchParams.get('user');
     if (userId) {
       setLoading(true);
-      const token = getStoredToken();
-      axios.get(`${SERVER}/api/auth/users/${userId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-        .then(r => r.data)
-        .then(data => {
-          if (data.success) setViewingUser(data.user);
+      fetchUserProfile(userId)
+        .then((data) => {
+          if (data?.success) setViewingUser(data.user);
           else setViewingUser(null);
         })
         .catch(() => setViewingUser(null))
@@ -80,18 +81,15 @@ export default function Profile() {
     }
     setViewingUser(null);
     setLoading(false);
-  }, [searchParams, SERVER]);
+  }, [searchParams]);
 
   // Fetch friends of target user
   let target = viewingUser || user;
 
   useEffect(() => {
     if (target?.id) {
-      const token = getStoredToken();
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      axios.get(`${SERVER}/api/friends/list/${target.id}`, { headers })
-        .then(r => {
-          const data = r.data;
+      fetchFriendsForUser(target.id)
+        .then((data) => {
           if (data?.hidden) {
             setFriendsHidden(true);
             setFriendsList([]);
@@ -107,7 +105,7 @@ export default function Profile() {
     } else {
       setFriendsList([]);
     }
-  }, [target?.id, SERVER]);
+  }, [target?.id]);
 
   // Listen for real-time friend updates
   useEffect(() => {
@@ -230,7 +228,7 @@ export default function Profile() {
 
             <div className={styles.badgesRow}>
               {target.role === 'admin' && <div className={styles.badge} style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>Admin</div>}
-              {getUserFlairs(target).map(f => (
+              {getUserFlairs(target, { showPrivate: isMe }).map(f => (
                 <FlairBadge key={f.id} flair={f} />
               ))}
             </div>
@@ -266,7 +264,7 @@ export default function Profile() {
                   </button>
                 )}
                 <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`} onClick={() => setShowFlairPicker(true)}>
-                  Change Flair
+                  {(user?.flair || (user?.flairs && user.flairs.length > 0)) ? 'Change Flair' : 'Add Flair'}
                 </button>
               </div>
             )}
@@ -395,15 +393,19 @@ export default function Profile() {
       </motion.div>
       {showFlairPicker && (
         <FlairPicker
-          current={getUserFlairs(user)[0]}
-          onChoose={async (flairId) => {
+          user={user}
+          onSave={async (flairIds) => {
             try {
-              const token = getStoredToken();
-              await axios.put(`${SERVER}/api/auth/flair`, { flair: flairId }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-              const res = await axios.get(`${SERVER}/api/auth/me`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-              if (res.data?.user) updateUser(res.data.user);
+              const data = await updateFlairs(flairIds);
+              if (data?.user) updateUser(data.user);
+              else {
+                const me = await fetchMe();
+                if (me?.user) updateUser(me.user);
+              }
             } catch (e) {
-              console.error('Failed to save flair', e);
+              const msg = e.response?.data?.error || 'Failed to save flairs';
+              console.error('Failed to save flairs', e);
+              alert(msg);
             }
           }}
           onClose={() => setShowFlairPicker(false)}

@@ -48,6 +48,10 @@ export const joinGroup = (groupId) => api.post(`/groups/join/${groupId}`).then(r
 export const joinByInvite = (code) => api.post(`/groups/join/invite/${code}`).then(r => r.data);
 export const leaveGroup = (groupId) => api.delete(`/groups/leave/${groupId}`).then(r => r.data);
 export const updateProfile = (data) => api.put('/auth/profile', data).then(r => r.data);
+export const updateFlair = (flair, action = 'toggle') =>
+  api.put('/auth/flair', { flair, action }).then(r => r.data);
+export const updateFlairs = (flairs) => api.put('/auth/flair', { flairs }).then(r => r.data);
+export const fetchMe = () => api.get('/auth/me').then(r => r.data);
 export const fetchStars = (userIds) => {
   if (!userIds?.length) return Promise.resolve({ counts: {}, starredByMe: [] });
   return api.get(`/auth/stars?ids=${userIds.join(',')}`).then(r => r.data);

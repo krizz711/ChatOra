@@ -119,9 +119,9 @@ router.post('/help', async (req, res) => {
   }
 
   const payload = {
-    from: process.env.SMTP_USER || 'nexchat-app',
+    from: process.env.SMTP_USER || 'chatora-app',
     to: HELP_EMAIL,
-    subject: `NexChat Help — ${req.user.username}`,
+    subject: `ChatOra Help — ${req.user.username}`,
     text: [
       `From: ${req.user.username}`,
       `Email: ${req.user.email || 'n/a'}`,

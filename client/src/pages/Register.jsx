@@ -13,7 +13,7 @@ export default function Register() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.logo}>NexChat</div>
+        <div className={styles.logo}>ChatOra</div>
         <p className={styles.sub}>Create your account</p>
 
         <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text2)' }}>

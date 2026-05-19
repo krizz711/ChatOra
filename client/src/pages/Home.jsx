@@ -256,7 +256,7 @@ export default function Home() {
             ) : (
               <div className={styles.welcome}>
                 <div className={styles.welcomeInner}>
-                  <div className={styles.welcomeLogo}>NexChat</div>
+                  <div className={styles.welcomeLogo}>ChatOra</div>
                   <p>Select a room from the sidebar to start chatting.</p>
                   <p className={styles.hint}>Messages are not stored — they live only while you're connected.</p>
                 </div>

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const supabase = require('../db/supabase');
 const { getUserColumns } = require('../db/userColumns');
+const { withOwnerFlag } = require('../utils/owner');
 
 const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -43,7 +44,7 @@ const authMiddleware = async (req, res, next) => {
 
     if (error || !user) return res.status(401).json({ error: 'Invalid token' });
     const needsProfile = user.age == null || user.country == null || !user.gender || user.gender === 'other';
-    req.user = { ...user, needsProfile };
+    req.user = { ...withOwnerFlag(user), needsProfile };
     next();
   } catch {
     return res.status(401).json({ error: 'Token expired or invalid' });
@@ -87,7 +88,7 @@ const socketAuth = async (socket, next) => {
 
     if (error || !user) return next(new Error('Invalid token'));
     const needsProfile = user.age == null || user.country == null || !user.gender || user.gender === 'other';
-    socket.user = { ...user, needsProfile };
+    socket.user = { ...withOwnerFlag(user), needsProfile };
     next();
   } catch {
     next(new Error('Token expired'));

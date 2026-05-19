@@ -103,7 +103,7 @@ export default function SplashScreen({ onDone, isLoaded }) {
 
             {/* Brand */}
             <div className={s.brand}>
-                <div className={s.brandName}>NexChat</div>
+                <div className={s.brandName}>ChatOra</div>
                 <div className={s.brandTagline}>Connect. Chat. Explore.</div>
             </div>
 

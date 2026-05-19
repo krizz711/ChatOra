@@ -1,18 +1,19 @@
 import React from 'react';
+import styles from './FlairBadge.module.css';
+
+function EarthFlairIcon() {
+  return (
+    <span className={styles.earthIcon} aria-hidden>
+      <span className={styles.earthGlobe} />
+    </span>
+  );
+}
 
 export default function FlairBadge({ flair, size = 'sm' }) {
   if (!flair) return null;
 
-  const isOwner = flair.id === 'owner';
-  const style = isOwner ? {
-    borderColor: flair.color,
-    color: '#fff',
-    background: flair.color,
-    boxShadow: `0 0 12px ${flair.color}`,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  } : {
+  const isEarth = flair.id === 'earthloader';
+  const style = isEarth ? undefined : {
     borderColor: flair.color,
     color: flair.color,
     background: flair.bg,
@@ -20,12 +21,12 @@ export default function FlairBadge({ flair, size = 'sm' }) {
 
   return (
     <div
-      className={`badge ${size}`}
+      className={`${styles.badge} ${styles[size]} ${isEarth ? styles.earthBadge : ''}`}
       style={style}
       title={flair.description}
     >
-      <span className="emoji" style={{ marginRight: 6 }}>{flair.emoji}</span>
-      <span className="label">{flair.label}</span>
+      {isEarth ? <EarthFlairIcon /> : <span className={styles.emoji}>{flair.emoji}</span>}
+      <span className={styles.label}>{flair.label}</span>
     </div>
   );
 }
