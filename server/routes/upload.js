@@ -2,6 +2,10 @@ const router = require('express').Router();
 const rateLimit = require('express-rate-limit');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { upload } = require('../config/cloudinary');
+const {
+  handleValidationError,
+  sanitizeUrl,
+} = require('../middleware/validation');
 
 // Strict upload rate limit: 5 uploads per minute per IP
 const uploadLimiter = rateLimit({
@@ -32,23 +36,8 @@ router.post('/', authMiddleware, uploadLimiter, upload.single('file'), async (re
 // Proxy file fetch for authenticated clients to avoid browser CORS issues on remote asset hosts.
 router.get('/fetch', authMiddleware, async (req, res) => {
   try {
-    const { url } = req.query;
-    if (!url || typeof url !== 'string') {
-      return res.status(400).json({ error: 'Missing url query parameter' });
-    }
-
-    let target;
-    try {
-      target = new URL(url);
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
-    }
-
-    const host = target.hostname;
-    const isCloudinary = host === 'res.cloudinary.com' || host.endsWith('.cloudinary.com');
-    if (target.protocol !== 'https:' || !isCloudinary) {
-      return res.status(403).json({ error: 'Only Cloudinary URLs allowed' });
-    }
+    const targetUrl = sanitizeUrl(req.query.url, { field: 'url', max: 2048, allowedHosts: ['res.cloudinary.com', 'cloudinary.com'] });
+    const target = new URL(targetUrl);
 
     const upstream = await fetch(target.toString());
     if (!upstream.ok) {
@@ -68,7 +57,7 @@ router.get('/fetch', authMiddleware, async (req, res) => {
     const body = Buffer.from(await upstream.arrayBuffer());
     return res.send(body);
   } catch (err) {
-    return res.status(500).json({ error: err.message || 'File proxy failed' });
+    return handleValidationError(res, err) || res.status(500).json({ error: err.message || 'File proxy failed' });
   }
 });
 

@@ -2,6 +2,13 @@ const router = require('express').Router();
 const { v4: uuidv4 } = require('uuid');
 const supabase = require('../db/supabase');
 const { authMiddleware } = require('../middleware/authMiddleware');
+const {
+  handleValidationError,
+  sanitizeBoolean,
+  sanitizeInviteCode,
+  sanitizeName,
+  sanitizeUuid,
+} = require('../middleware/validation');
 
 // Get all global groups + user's groups
 router.get('/', authMiddleware, async (req, res) => {
@@ -39,8 +46,15 @@ router.get('/', authMiddleware, async (req, res) => {
 
 // Create a group
 router.post('/create', authMiddleware, async (req, res) => {
-  const { name, is_private } = req.body;
-  if (!name) return res.status(400).json({ error: 'Group name required' });
+  let name;
+  let is_private;
+  try {
+    ({ name, is_private } = req.body);
+    name = sanitizeName(name, 'name', { min: 2, max: 50 });
+    if (is_private !== undefined) is_private = sanitizeBoolean(is_private, 'is_private');
+  } catch (err) {
+    return handleValidationError(res, err);
+  }
 
   try {
     const invite_code = is_private ? uuidv4().slice(0, 8).toUpperCase() : null;
@@ -74,10 +88,11 @@ router.post('/create', authMiddleware, async (req, res) => {
 // Join private group by invite code
 router.post('/join/invite/:code', authMiddleware, async (req, res) => {
   try {
+    const code = sanitizeInviteCode(req.params.code);
     const { data: group } = await supabase
       .from('groups')
       .select('*')
-      .eq('invite_code', req.params.code.toUpperCase())
+      .eq('invite_code', code)
       .single();
 
     if (!group) return res.status(404).json({ error: 'Invalid invite code' });
@@ -96,10 +111,11 @@ router.post('/join/invite/:code', authMiddleware, async (req, res) => {
 // Join a public group
 router.post('/join/:groupId', authMiddleware, async (req, res) => {
   try {
+    const groupId = sanitizeUuid(req.params.groupId, 'groupId');
     const { data: group } = await supabase
       .from('groups')
       .select('*')
-      .eq('id', req.params.groupId)
+      .eq('id', groupId)
       .eq('is_private', false)
       .single();
 
@@ -119,10 +135,11 @@ router.post('/join/:groupId', authMiddleware, async (req, res) => {
 // Leave a group
 router.delete('/leave/:groupId', authMiddleware, async (req, res) => {
   try {
+    const groupId = sanitizeUuid(req.params.groupId, 'groupId');
     await supabase
       .from('group_members')
       .delete()
-      .eq('group_id', req.params.groupId)
+      .eq('group_id', groupId)
       .eq('user_id', req.user.id);
 
     res.json({ success: true });

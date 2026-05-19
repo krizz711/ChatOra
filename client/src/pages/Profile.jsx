@@ -7,6 +7,9 @@ import { updateProfile, uploadAvatar } from '../utils/api';
 import { getStoredToken } from '../utils/token';
 import axios from 'axios';
 import styles from './Profile.module.css';
+import { getUserFlairs } from '../utils/flairs';
+import FlairPicker from '../components/FlairPicker';
+import FlairBadge from '../components/FlairBadge';
 import { getCode } from 'country-list';
 import 'flag-icons/css/flag-icons.min.css';
 import { Country, State } from 'country-state-city';
@@ -38,6 +41,7 @@ export default function Profile() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const fileRef = useRef(null);
+  const [showFlairPicker, setShowFlairPicker] = useState(false);
 
   const SERVER = import.meta.env.VITE_SERVER_URL || '';
   const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
@@ -201,7 +205,9 @@ export default function Profile() {
 
             <div className={styles.badgesRow}>
               {target.role === 'admin' && <div className={styles.badge} style={{ borderColor: 'var(--red)', color: 'var(--red)' }}>Admin</div>}
-              {target.star_count >= 10 && <div className={styles.badge} style={{ borderColor: 'var(--yellow)', color: 'var(--yellow)' }}>Popular</div>}
+              {getUserFlairs(target).map(f => (
+                <FlairBadge key={f.id} flair={f} />
+              ))}
             </div>
 
             {isMe && (
@@ -215,7 +221,7 @@ export default function Profile() {
                     Edit Profile
                   </button>
                 )}
-                <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`}>
+                <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`} onClick={() => setShowFlairPicker(true)}>
                   Change Flair
                 </button>
               </div>
@@ -334,6 +340,22 @@ export default function Profile() {
         </div>
 
       </motion.div>
+      {showFlairPicker && (
+        <FlairPicker
+          current={getUserFlairs(user)[0]}
+          onChoose={async (flairId) => {
+            try {
+              const token = getStoredToken();
+              await axios.put(`${SERVER}/api/auth/flair`, { flair: flairId }, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+              const res = await axios.get(`${SERVER}/api/auth/me`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+              if (res.data?.user) updateUser(res.data.user);
+            } catch (e) {
+              console.error('Failed to save flair', e);
+            }
+          }}
+          onClose={() => setShowFlairPicker(false)}
+        />
+      )}
     </div>
   );
 }

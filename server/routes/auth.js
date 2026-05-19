@@ -7,12 +7,34 @@ const { upload, cloudinary } = require('../config/cloudinary');
 const passport = require('../config/passport');
 const rateLimit = require('express-rate-limit');
 const { getUserColumns, stripUnsupportedUserFields, hasUsersColumn } = require('../db/userColumns');
+const {
+  handleValidationError,
+  sanitizeAge,
+  sanitizeEmail,
+  sanitizeGender,
+  sanitizeIdsQuery,
+  sanitizeName,
+  sanitizeOptionalString,
+  sanitizePassword,
+  sanitizeString,
+  sanitizeText,
+  sanitizeUsername,
+  sanitizeUuid,
+} = require('../middleware/validation');
 
-// Dedicated auth rate limiter — much stricter than global
-const authLimiter = rateLimit({
+// Dedicated auth rate limiter for credential entry points
+const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 5,
   message: { error: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many signup attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -48,8 +70,15 @@ router.get('/google/callback', (req, res, next) => {
   const CLIENT = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
   const stateCookie = req.cookies && req.cookies.nexchat_oauth_state;
   const stateQuery = req.query.state;
-  if (!stateCookie || !stateQuery || stateCookie !== stateQuery) {
-    // Clear cookie and abort
+  try {
+    const safeStateCookie = sanitizeString(String(stateCookie || ''), { field: 'state', min: 8, max: 64, pattern: /^[a-f0-9]+$/i });
+    const safeStateQuery = sanitizeString(String(stateQuery || ''), { field: 'state', min: 8, max: 64, pattern: /^[a-f0-9]+$/i });
+    if (safeStateCookie !== safeStateQuery) {
+      // Clear cookie and abort
+      res.clearCookie('nexchat_oauth_state');
+      return res.redirect(`${CLIENT}/login?error=csrf`);
+    }
+  } catch {
     res.clearCookie('nexchat_oauth_state');
     return res.redirect(`${CLIENT}/login?error=csrf`);
   }
@@ -129,72 +158,65 @@ const guestLimiter = rateLimit({
 });
 
 router.post('/guest', guestLimiter, async (req, res) => {
-  const { username, country, state, gender, age } = req.body;
+  try {
+    const { username, country, state, gender, age } = req.body;
+    const clean = sanitizeUsername(username);
+    const safeCountry = sanitizeOptionalString(country, { field: 'country', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    const safeState = sanitizeOptionalString(state, { field: 'state', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    const safeGender = sanitizeGender(gender);
+    const parsedAge = sanitizeAge(age);
 
-  if (!username || typeof username !== 'string') {
-    return res.status(400).json({ error: 'Display name is required' });
+    if (!safeCountry || !safeState || !safeGender || parsedAge === null) {
+      return res.status(400).json({ error: 'Please provide country, state, gender and age for guest sessions' });
+    }
+
+    // Guest JWT — short-lived, carries guest flag and includes profile info (not stored in DB)
+    const guestId = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const token = jwt.sign(
+      {
+        userId: guestId,
+        username: clean,
+        isGuest: true,
+        country: safeCountry,
+        state: safeState,
+        gender: safeGender,
+        age: parsedAge,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '4h' } // Guests auto-expire
+    );
+
+    res.json({
+      user: {
+        id: guestId,
+        username: clean,
+        email: null,
+        avatar_url: null,
+        bio: '',
+        isGuest: true,
+        country: safeCountry,
+        state: safeState,
+        gender: safeGender,
+        age: parsedAge,
+      },
+      token,
+    });
+  } catch (err) {
+    return handleValidationError(res, err);
   }
-
-  const clean = username.trim().replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 20);
-  if (clean.length < 2) {
-    return res.status(400).json({ error: 'Display name must be at least 2 characters' });
-  }
-
-  // Require full details for guest per user's request
-  if (!country || !state || !gender || age === undefined || age === null || String(age).trim() === '') {
-    return res.status(400).json({ error: 'Please provide country, state, gender and age for guest sessions' });
-  }
-
-  const parsedAge = parseAge(age);
-  if (parsedAge === null) return res.status(400).json({ error: 'Invalid age' });
-
-  // Guest JWT — short-lived, carries guest flag and includes profile info (not stored in DB)
-  const guestId = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  const token = jwt.sign(
-    {
-      userId: guestId,
-      username: clean,
-      isGuest: true,
-      country: country?.trim() || null,
-      state: state?.trim() || null,
-      gender: normalizeGender(gender),
-      age: parsedAge,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: '4h' } // Guests auto-expire
-  );
-
-  res.json({
-    user: {
-      id: guestId,
-      username: clean,
-      email: null,
-      avatar_url: null,
-      bio: '',
-      isGuest: true,
-      country: country?.trim() || null,
-      state: state?.trim() || null,
-      gender: normalizeGender(gender),
-      age: parsedAge,
-    },
-    token,
-  });
 });
 
 // Register
-router.post('/register', authLimiter, async (req, res) => {
-  const { username, email, password, country, state, gender, age } = req.body;
-  if (!username || !email || !password)
-    return res.status(400).json({ error: 'All fields required' });
-
-  if (password.length < 6)
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
-
+router.post('/register', signupLimiter, async (req, res) => {
   try {
-    // Sanitize inputs before interpolation into .or()
-    const safeUsername = username.trim().replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 30);
-    const safeEmail = email.trim().replace(/[^a-zA-Z0-9@._+\-]/g, '').slice(0, 100);
-    if (!safeUsername || !safeEmail) return res.status(400).json({ error: 'Invalid username or email format' });
+    const { username, email, password, country, state, gender, age } = req.body;
+    const safeUsername = sanitizeUsername(username);
+    const safeEmail = sanitizeEmail(email);
+    const safePassword = sanitizePassword(password);
+    const safeCountry = sanitizeOptionalString(country, { field: 'country', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    const safeState = sanitizeOptionalString(state, { field: 'state', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    const safeGender = sanitizeGender(gender);
+    const safeAge = sanitizeAge(age);
 
     const { data: existing } = await supabase
       .from('users')
@@ -204,18 +226,18 @@ router.post('/register', authLimiter, async (req, res) => {
 
     if (existing) return res.status(409).json({ error: 'Username or email already taken' });
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(safePassword, 12);
     const canStoreAge = await hasUsersColumn('age');
     const { data: user, error } = await supabase
       .from('users')
       .insert(await stripUnsupportedUserFields({
-        username,
-        email,
+        username: safeUsername,
+        email: safeEmail,
         password_hash: hashedPassword,
-        country: country?.trim() || null,
-        state: state?.trim() || null,
-        gender: normalizeGender(gender),
-        age: canStoreAge ? parseAge(age) : undefined,
+        country: safeCountry,
+        state: safeState,
+        gender: safeGender,
+        age: canStoreAge ? safeAge : undefined,
       }))
       .select(await getUserColumns())
       .single();
@@ -225,34 +247,38 @@ router.post('/register', authLimiter, async (req, res) => {
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ user, token });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return handleValidationError(res, err) || res.status(500).json({ error: err.message });
   }
 });
 
 // Login
-router.post('/login', authLimiter, async (req, res) => {
-  const { email, password, country, state, gender, age } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ error: 'Email and password required' });
-
+router.post('/login', loginLimiter, async (req, res) => {
   try {
+    const { email, password, country, state, gender, age } = req.body;
+    const safeEmail = sanitizeEmail(email);
+    const safePassword = sanitizePassword(password);
+    const safeCountry = sanitizeOptionalString(country, { field: 'country', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    const safeState = sanitizeOptionalString(state, { field: 'state', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    const safeGender = sanitizeGender(gender);
+    const safeAge = sanitizeAge(age);
+
     const userColumns = await getUserColumns({ includePasswordHash: true });
     const { data: user, error } = await supabase
       .from('users')
       .select(userColumns)
-      .eq('email', email)
+      .eq('email', safeEmail)
       .single();
 
     if (error || !user) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const valid = await bcrypt.compare(password, user.password_hash);
+    const valid = await bcrypt.compare(safePassword, user.password_hash);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
     const profilePatch = {};
-    if (country !== undefined) profilePatch.country = country?.trim() || null;
-    if (state !== undefined) profilePatch.state = state?.trim() || null;
-    if (gender !== undefined) profilePatch.gender = normalizeGender(gender);
-    if (age !== undefined && await hasUsersColumn('age')) profilePatch.age = parseAge(age);
+    if (country !== undefined) profilePatch.country = safeCountry;
+    if (state !== undefined) profilePatch.state = safeState;
+    if (gender !== undefined) profilePatch.gender = safeGender;
+    if (age !== undefined && await hasUsersColumn('age')) profilePatch.age = safeAge;
 
     let safeUser = user;
     if (Object.keys(profilePatch).length) {
@@ -273,7 +299,7 @@ router.post('/login', authLimiter, async (req, res) => {
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ user: safeUser, token });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return handleValidationError(res, err) || res.status(500).json({ error: err.message });
   }
 });
 
@@ -284,13 +310,12 @@ router.get('/me', authMiddleware, (req, res) => {
 
 // Get star stats for a list of user IDs
 router.get('/stars', authMiddleware, async (req, res) => {
-  const idsParam = req.query.ids;
-  if (!idsParam) return res.json({ counts: {}, starredByMe: [] });
-
-  const ids = String(idsParam)
-    .split(',')
-    .map(v => v.trim())
-    .filter(Boolean);
+  let ids;
+  try {
+    ids = sanitizeIdsQuery(req.query.ids, { maxItems: 50 });
+  } catch (err) {
+    return handleValidationError(res, err);
+  }
 
   if (!ids.length) return res.json({ counts: {}, starredByMe: [] });
 
@@ -327,11 +352,15 @@ router.get('/stars', authMiddleware, async (req, res) => {
 
 // Star or unstar another user (toggle)
 router.post('/star/:userId', authMiddleware, async (req, res) => {
-  const { userId } = req.params;
+  let userId;
+  try {
+    userId = sanitizeUuid(req.params.userId, 'userId');
+  } catch (err) {
+    return handleValidationError(res, err);
+  }
   if (!userId) return res.status(400).json({ error: 'Target user is required' });
   if (userId.startsWith('guest_')) return res.status(400).json({ error: 'Cannot star a guest user' });
   if (userId === req.user.id) return res.status(400).json({ error: 'You cannot star yourself' });
-  if (!isValidId(userId)) return res.status(400).json({ error: 'Invalid user ID format' });
 
   try {
     const { data: target, error: targetErr } = await supabase
@@ -399,15 +428,15 @@ router.put('/profile', authMiddleware, async (req, res) => {
     return res.status(403).json({ error: 'Guests cannot update profiles' });
   }
 
-  const { username, bio, country, state, gender, age } = req.body;
   try {
+    const { username, bio, country, state, gender, age } = req.body;
     const profilePatch = {};
-    if (username !== undefined) profilePatch.username = username?.trim();
-    if (bio !== undefined) profilePatch.bio = bio?.trim() || '';
-    if (country !== undefined) profilePatch.country = country?.trim() || null;
-    if (state !== undefined) profilePatch.state = state?.trim() || null;
-    if (gender !== undefined) profilePatch.gender = normalizeGender(gender);
-    if (age !== undefined && await hasUsersColumn('age')) profilePatch.age = parseAge(age);
+    if (username !== undefined) profilePatch.username = sanitizeUsername(username);
+    if (bio !== undefined) profilePatch.bio = sanitizeText(bio, { field: 'bio', min: 0, max: 500, allowNewlines: true });
+    if (country !== undefined) profilePatch.country = sanitizeOptionalString(country, { field: 'country', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    if (state !== undefined) profilePatch.state = sanitizeOptionalString(state, { field: 'state', min: 2, max: 80, pattern: /^[A-Za-z0-9 .,'-]+$/ });
+    if (gender !== undefined) profilePatch.gender = sanitizeGender(gender);
+    if (age !== undefined && await hasUsersColumn('age')) profilePatch.age = sanitizeAge(age);
 
     const { data, error } = await supabase
       .from('users')
@@ -419,7 +448,7 @@ router.put('/profile', authMiddleware, async (req, res) => {
     if (error) throw error;
     res.json({ user: data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return handleValidationError(res, err) || res.status(500).json({ error: err.message });
   }
 });
 
@@ -448,9 +477,12 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res)
 
 // Get public user profile by ID
 router.get('/users/:userId', async (req, res) => {
-  const { userId } = req.params;
-  if (!userId) return res.status(400).json({ error: 'User ID required' });
-  if (!isValidId(userId)) return res.status(400).json({ error: 'Invalid user ID format' });
+  let userId;
+  try {
+    userId = sanitizeUuid(req.params.userId, 'userId');
+  } catch (err) {
+    return handleValidationError(res, err);
+  }
 
   try {
     const { data: user, error } = await supabase

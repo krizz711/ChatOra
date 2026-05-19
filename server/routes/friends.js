@@ -2,6 +2,12 @@ const express = require('express');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const supabase = require('../db/supabase');
 const { getActiveUser } = require('../socket/socketHandler');
+const {
+    handleValidationError,
+    sanitizeBoolean,
+    sanitizeUuid,
+    sanitizeUserId,
+} = require('../middleware/validation');
 
 let _io = null;
 const router = express.Router();
@@ -88,8 +94,7 @@ router.get('/', async (req, res) => {
 // GET /list/:userId => Query friendships table joining users for specific user context
 router.get('/list/:userId', async (req, res) => {
     try {
-        const targetId = req.params.userId;
-        if (!isValidId(targetId)) return res.status(400).json({ error: 'Invalid user ID format' });
+        const targetId = sanitizeUuid(req.params.userId, 'userId');
         const { data: friendships, error } = await supabase
             .from('friendships')
             .select(`id, friends_since, user_a_id, user_b_id`)
@@ -150,7 +155,12 @@ router.get('/requests', async (req, res) => {
 router.post('/request/:userId', async (req, res) => {
     if (req.user.isGuest) return res.status(403).json({ error: 'Guests cannot send friend requests' });
 
-    const targetId = req.params.userId;
+    let targetId;
+    try {
+        targetId = sanitizeUuid(req.params.userId, 'userId');
+    } catch (err) {
+        return handleValidationError(res, err);
+    }
     if (req.user.id === targetId) return res.status(400).json({ error: 'Cannot friend yourself' });
     if (targetId.startsWith('guest_')) return res.status(403).json({ error: 'Cannot friend guests' });
     if (!isValidId(targetId)) return res.status(400).json({ error: 'Invalid user ID format' });
@@ -243,7 +253,12 @@ router.post('/request/:userId', async (req, res) => {
 router.post('/accept/:requestId', async (req, res) => {
     if (req.user.isGuest) return res.status(403).json({ error: 'Guests cannot accept friend requests' });
 
-    const requestId = req.params.requestId;
+    let requestId;
+    try {
+        requestId = sanitizeUuid(req.params.requestId, 'requestId');
+    } catch (err) {
+        return handleValidationError(res, err);
+    }
 
     try {
         const { data: request, error } = await supabase
@@ -264,7 +279,12 @@ router.post('/accept/:requestId', async (req, res) => {
 
 // POST /decline/:requestId
 router.post('/decline/:requestId', async (req, res) => {
-    const requestId = req.params.requestId;
+    let requestId;
+    try {
+        requestId = sanitizeUuid(req.params.requestId, 'requestId');
+    } catch (err) {
+        return handleValidationError(res, err);
+    }
 
     try {
         const { error } = await supabase
@@ -286,7 +306,12 @@ router.post('/decline/:requestId', async (req, res) => {
 router.delete('/:userId', async (req, res) => {
     if (req.user.isGuest) return res.status(403).json({ error: 'Guests cannot have friends' });
 
-    const targetId = req.params.userId;
+    let targetId;
+    try {
+        targetId = sanitizeUuid(req.params.userId, 'userId');
+    } catch (err) {
+        return handleValidationError(res, err);
+    }
     const [user_a_id, user_b_id] = friendshipKey(req.user.id, targetId);
 
     try {
@@ -310,8 +335,12 @@ router.put('/settings', async (req, res) => {
 
     const { calls_enabled, notification_sound } = req.body;
     const updateData = {};
-    if (typeof calls_enabled === 'boolean') updateData.calls_enabled = calls_enabled;
-    if (typeof notification_sound === 'boolean') updateData.notification_sound = notification_sound;
+    try {
+        if (calls_enabled !== undefined) updateData.calls_enabled = sanitizeBoolean(calls_enabled, 'calls_enabled');
+        if (notification_sound !== undefined) updateData.notification_sound = sanitizeBoolean(notification_sound, 'notification_sound');
+    } catch (err) {
+        return handleValidationError(res, err);
+    }
 
     if (Object.keys(updateData).length === 0) return res.status(400).json({ error: 'No valid settings provided' });
 
@@ -333,8 +362,12 @@ router.put('/settings', async (req, res) => {
 
 // GET /check/:userId
 router.get('/check/:userId', async (req, res) => {
-    const targetId = req.params.userId;
-    if (!isValidId(targetId)) return res.status(400).json({ error: 'Invalid user ID format' });
+    let targetId;
+    try {
+        targetId = sanitizeUuid(req.params.userId, 'userId');
+    } catch (err) {
+        return handleValidationError(res, err);
+    }
     const [user_a_id, user_b_id] = friendshipKey(safeId(req.user.id), safeId(targetId));
 
     try {
