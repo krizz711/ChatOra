@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getSocket, onSocketReset, offSocketReset } from '../socket';
 import { generateKeyPair, deriveSharedKey, encryptMessage, decryptMessage } from '../utils/encryption';
+import { playNotificationSound } from '../utils/notifications';
 
 const MAX_MESSAGES = 200;
 
-export const usePrivateChat = (currentUserId) => {
+export const usePrivateChat = (currentUserId, currentUser = null) => {
   const [conversations, setConversations] = useState({}); // { userId: [messages] }
   const [activeChat, setActiveChat] = useState(null);
   const myKeyPair = useRef(null);
@@ -51,6 +52,11 @@ export const usePrivateChat = (currentUserId) => {
           console.error('decrypt error', err);
         }
 
+        // Play notification sound if enabled and message not from current user
+        if (currentUser?.notification_sound && displayMsg.sender?.id !== currentUserId) {
+          playNotificationSound();
+        }
+
         const key = displayMsg.sender.id === currentUserId ? displayMsg.toUserId : displayMsg.sender.id;
         setConversations(prev => {
           const existing = prev[key] || [];
@@ -90,7 +96,7 @@ export const usePrivateChat = (currentUserId) => {
       if (cleanup) cleanup();
       offSocketReset(handleReset);
     };
-  }, [currentUserId]);
+  }, [currentUserId, currentUser?.notification_sound]);
 
   const sendPrivateMessage = useCallback((toUserId, text) => {
     const socket = getSocket();

@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { uploadFile } from '../utils/api';
 import { downloadChatTxt, downloadFile } from '../utils/download';
 import { format } from 'date-fns';
+import { getUserFlairs } from '../utils/flairs';
+import FlairBadge from './FlairBadge';
 import styles from './PrivateChat.module.css';
 
 export default function PrivateChat({ targetUser, messages, onSend, onSendFile, onClose, onCallUser, onStarUser, starringUserId, onViewProfile, fullScreen = false }) {
@@ -62,7 +64,14 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
               ? <img src={targetUser.avatar_url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
               : targetUser.username?.slice(0, 2).toUpperCase()}
           </div>
-          <span>{targetUser.username}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>{targetUser.username}</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {getUserFlairs(targetUser).map((f) => (
+                <FlairBadge key={f.id} flair={f} size="xs" />
+              ))}
+            </div>
+          </div>
           <button
             className={`${styles.starBtn} ${targetUser.starredByMe ? styles.starred : ''}`}
             type="button"

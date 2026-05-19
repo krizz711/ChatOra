@@ -1,29 +1,45 @@
-const STORAGE_KEY = 'nexchat_notification_sound';
+// Better notification sound - multi-note melody
+let notificationSoundEnabled = true;
 
-export function setNotificationSoundEnabled(enabled) {
-  localStorage.setItem(STORAGE_KEY, enabled ? 'true' : 'false');
-}
+export const setNotificationSoundEnabled = (enabled) => {
+  notificationSoundEnabled = enabled;
+};
 
-export function isNotificationSoundEnabled() {
-  const v = localStorage.getItem(STORAGE_KEY);
-  if (v === null) return true;
-  return v === 'true';
-}
+export const isNotificationSoundEnabled = () => notificationSoundEnabled;
 
-export function playNotificationTone() {
-  if (!isNotificationSoundEnabled()) return;
+export const playNotificationSound = async () => {
+  if (!notificationSoundEnabled) return;
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.2);
-  } catch {
-    // ignore if audio blocked
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioContext.currentTime;
+
+    // Create a pleasant 3-note chime
+    const notes = [
+      { freq: 523.25, start: 0, duration: 0.15 },    // C5
+      { freq: 659.25, start: 0.1, duration: 0.15 },  // E5
+      { freq: 783.99, start: 0.2, duration: 0.25 },  // G5
+    ];
+
+    notes.forEach(({ freq, start, duration }) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+
+      gain.gain.setValueAtTime(0.15, now + start);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + start + duration);
+
+      osc.start(now + start);
+      osc.stop(now + start + duration);
+    });
+  } catch (err) {
+    console.warn('Could not play notification sound:', err);
   }
-}
+};
+
+// Alias for incoming calls
+export const playNotificationTone = playNotificationSound;

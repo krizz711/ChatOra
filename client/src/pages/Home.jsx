@@ -30,7 +30,7 @@ export default function Home() {
     }
     return 'active';
   });
-  const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id);
+  const { activeChat, openChat, closeChat, getMessages, sendPrivateMessage, sendPrivateFile } = usePrivateChat(user.id, user);
   const { callState, callType, remoteUser, incomingCall, startCall, acceptCall, declineCall, endCall, localVideoRef, remoteVideoRef } = useCall(user);
   const [isSocketLoaded, setIsSocketLoaded] = useState(false);
 

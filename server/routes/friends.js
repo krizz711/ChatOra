@@ -336,6 +336,29 @@ router.delete('/:userId', async (req, res) => {
 
         if (error) return res.status(500).json({ error: 'Failed to delete friendship' });
 
+        // Notify both users about the unfriend in real-time
+        try {
+            if (_io) {
+                const activeUser1 = getActiveUser(req.user.id);
+                const activeUser2 = getActiveUser(targetId);
+
+                if (activeUser1) {
+                    activeUser1.socketIds.forEach(sid => {
+                        const socket = _io.sockets.sockets.get(sid);
+                        if (socket) socket.emit('friend:removed', { removedUserId: targetId });
+                    });
+                }
+                if (activeUser2) {
+                    activeUser2.socketIds.forEach(sid => {
+                        const socket = _io.sockets.sockets.get(sid);
+                        if (socket) socket.emit('friend:removed', { removedUserId: req.user.id });
+                    });
+                }
+            }
+        } catch (emitErr) {
+            console.error('Failed to emit friend:removed', emitErr);
+        }
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });

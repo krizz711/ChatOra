@@ -23,6 +23,7 @@ const optionalUserColumns = [
   'calls_enabled',
   'notification_sound',
   'friends_list_hidden',
+  'is_owner',
 ];
 
 async function hasUsersColumn(columnName) {

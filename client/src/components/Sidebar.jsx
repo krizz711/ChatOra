@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../socket';
+import { getUserFlairs } from '../utils/flairs';
+import FlairBadge from './FlairBadge';
 import {
   fetchGroups,
   createGroup,
@@ -179,10 +182,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
           </button>
           {!user?.isGuest && (
             <button className={styles.iconBtn} onClick={() => navigate('/settings')} title="Settings">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-              </svg>
+              <Settings size={16} />
             </button>
           )}
           <button className={styles.iconBtn} onClick={logout} title="Logout">
@@ -343,7 +343,14 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                       )}
                     </div>
                     <div className={styles.userContent}>
-                      <span className={styles.userName}>{friend.username}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span className={styles.userName}>{friend.username}</span>
+                        <div style={{ display: 'flex', gap: 3 }}>
+                          {getUserFlairs(friend).map((f) => (
+                            <FlairBadge key={f.id} flair={f} size="xs" />
+                          ))}
+                        </div>
+                      </div>
                       <div className={styles.userMeta}>
                         {isOnline && (
                           <button
@@ -465,7 +472,14 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                     : u.username?.slice(0, 2).toUpperCase()}
                 </div>
                 <div className={styles.userContent}>
-                  <span className={styles.userName}>{u.username}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span className={styles.userName}>{u.username}</span>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {getUserFlairs(u).map((f) => (
+                        <FlairBadge key={f.id} flair={f} size="xs" />
+                      ))}
+                    </div>
+                  </div>
                   <div className={styles.userMeta}>
                     {u.id !== user?.id && (
                       friends.some(f => f.id === u.id) ? (

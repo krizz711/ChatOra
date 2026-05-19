@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageBack from '../components/PageBack';
-import { fetchFriendsForUser, fetchUserProfile } from '../utils/api';
+import { fetchFriendsForUser, fetchUserProfile, unfriend } from '../utils/api';
 import styles from './FriendsList.module.css';
+import { X } from 'lucide-react';
 
 const initials = (name) => name?.slice(0, 2).toUpperCase() || '??';
 
@@ -18,6 +19,7 @@ export default function FriendsList() {
   const [hidden, setHidden] = useState(false);
   const [loading, setLoading] = useState(true);
   const [displayName, setDisplayName] = useState('');
+  const [unfriending, setUnfriending] = useState(null);
 
   useEffect(() => {
     if (!targetUserId) return;
@@ -49,6 +51,19 @@ export default function FriendsList() {
       })
       .finally(() => setLoading(false));
   }, [targetUserId]);
+
+  const handleUnfriend = async (friendId) => {
+    if (!window.confirm('Remove this friend?')) return;
+    setUnfriending(friendId);
+    try {
+      await unfriend(friendId);
+      setFriends(friends.filter(f => f.id !== friendId));
+    } catch (err) {
+      alert('Failed to remove friend');
+    } finally {
+      setUnfriending(null);
+    }
+  };
 
   const title = isOwn ? 'My Friends' : `${displayName}'s Friends`;
 
@@ -94,6 +109,17 @@ export default function FriendsList() {
                     {f.bio && <div className={styles.bio}>{f.bio}</div>}
                   </div>
                 </button>
+                {isOwn && (
+                  <button
+                    type="button"
+                    className={styles.unfriendBtn}
+                    onClick={() => handleUnfriend(f.id)}
+                    disabled={unfriending === f.id}
+                    title="Remove friend"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
               </li>
             ))}
           </ul>

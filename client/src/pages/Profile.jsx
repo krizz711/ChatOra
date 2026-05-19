@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Upload } from 'lucide-react';
 import PageBack from '../components/PageBack';
 import { useAuth } from '../context/AuthContext';
+import { getSocket } from '../socket';
 import { updateProfile, uploadAvatar, blockUser } from '../utils/api';
 import { getStoredToken } from '../utils/token';
 import axios from 'axios';
@@ -107,6 +108,20 @@ export default function Profile() {
       setFriendsList([]);
     }
   }, [target?.id, SERVER]);
+
+  // Listen for real-time friend updates
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleFriendRemoved = ({ removedUserId }) => {
+      setFriendsList(prev => prev.filter(f => f.id !== removedUserId));
+    };
+
+    socket.on('friend:removed', handleFriendRemoved);
+
+    return () => socket.off('friend:removed', handleFriendRemoved);
+  }, []);
 
   const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 

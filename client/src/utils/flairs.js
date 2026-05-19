@@ -21,10 +21,11 @@ export const FLAIRS = [
   { id: 'hyped',       label: 'Hyped',        emoji: '🔥', color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  description: 'Maximum energy',              requirement: null },
   { id: 'verified',    label: 'Verified',     emoji: '✅', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', description: 'Verified account',             requirement: 'is_verified' },
   { id: 'pro',         label: 'Pro Member',   emoji: '💎', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', description: 'NexChat Pro subscriber',      requirement: 'is_pro' },
+  { id: 'owner',       label: 'Owner',        emoji: '👨‍💼', color: '#dc2626', bg: 'rgba(220,38,38,0.12)',  description: 'NexChat Founder',            requirement: 'is_owner' },
   { id: 'guest',       label: 'Guest',        emoji: '👤', color: '#94a3b8', bg: 'rgba(148,163,184,0.12)', description: 'Visiting as a guest',         requirement: 'isGuest' },
 ];
 
-export const AUTO_FLAIR_IDS = ['newcomer', 'regular', 'popular', 'superstar', 'legend', 'verified', 'pro', 'guest'];
+export const AUTO_FLAIR_IDS = ['newcomer', 'regular', 'popular', 'superstar', 'legend', 'verified', 'pro', 'owner', 'guest'];
 
 export const CHOOSABLE_FLAIRS = FLAIRS.filter(f => !AUTO_FLAIR_IDS.includes(f.id));
 
@@ -34,6 +35,7 @@ export const getAutoFlairs = (user) => {
   if (!user) return [];
   const result = [];
   if (user.isGuest) { result.push(getFlairById('guest')); return result; }
+  if (user.is_owner) result.push(getFlairById('owner'));
   if (user.is_pro) result.push(getFlairById('pro'));
   const stars = user.star_count || 0;
   if (stars >= 50)      result.push(getFlairById('legend'));

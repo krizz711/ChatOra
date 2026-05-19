@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useChat } from '../hooks/useChat';
 import { downloadChatTxt, downloadChatZip, downloadFile } from '../utils/download';
 import { format } from 'date-fns';
+import { getUserFlairs } from '../utils/flairs';
+import FlairBadge from './FlairBadge';
 import styles from './ChatRoom.module.css';
 import EmojiPicker from './EmojiPicker';
 
@@ -28,8 +30,15 @@ const MessageRow = memo(({ msg, isMine, showAvatar, user, onUserClick, onReply, 
 
       <div className={styles.msgContent}>
         {showAvatar && !isMine && (
-          <div className={styles.senderName} onClick={() => onUserClick?.(sender)} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Click to message">
-            {sender.username || 'Unknown'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div className={styles.senderName} onClick={() => onUserClick?.(sender)} style={{ cursor: 'pointer', textDecoration: 'underline' }} title="Click to message">
+              {sender.username || 'Unknown'}
+            </div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {getUserFlairs(sender).map((f) => (
+                <FlairBadge key={f.id} flair={f} size="xs" />
+              ))}
+            </div>
           </div>
         )}
 
