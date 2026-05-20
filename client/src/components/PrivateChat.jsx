@@ -6,6 +6,7 @@ import { downloadChatTxt, downloadFile } from '../utils/download';
 import { format } from 'date-fns';
 import { getUserFlairs } from '../utils/flairs';
 import FlairBadge from './FlairBadge';
+import { Image } from 'lucide-react';
 import styles from './PrivateChat.module.css';
 
 export default function PrivateChat({ targetUser, messages, onSend, onSendFile, onClose, onCallUser, onStarUser, starringUserId, onViewProfile, fullScreen = false }) {
@@ -84,8 +85,11 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
           </button>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          <button className={styles.iconBtn} onClick={() => onCallUser?.(targetUser, 'voice')} title="Call">
+          <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
             Call
+          </button>
+          <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
+            Video
           </button>
           <button className={styles.iconBtn} onClick={() => onViewProfile?.(targetUser)} title="View profile">
             Profile
@@ -124,8 +128,8 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
       {uploading && <div className={styles.uploading}>Uploading...</div>}
 
       <div className={styles.inputArea} style={{ position: 'relative' }}>
-        <input type="file" ref={fileRef} onChange={handleFile} style={{ display: 'none' }} accept="image/*,.pdf,.txt" />
-        <button className={styles.attachBtn} onClick={() => fileRef.current?.click()}>Attach</button>
+        <input type="file" ref={fileRef} onChange={handleFile} style={{ display: 'none' }} accept="image/*" />
+        <button className={styles.attachBtn} onClick={() => fileRef.current?.click()} title="Send picture"><Image size={18} /></button>
         <div className="emojiPickerWrap" ref={emojiWrapRef}>
           <button type="button" className={styles.attachBtn} onClick={() => setShowEmoji(s => !s)} title="Emoji" aria-label="Open emoji picker">😊</button>
           {showEmoji && (

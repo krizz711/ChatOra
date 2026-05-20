@@ -54,7 +54,7 @@ export default function FlairPicker({ user, onSave, onClose }) {
           })}
         </div>
         <div className="footer">
-          <button type="button" className="clearBtn" onClick={() => setSelected(new Set())}>Clear</button>
+          <button type="button" className="clearBtn" onClick={() => setSelected(new Set())}>Remove Flair</button>
           <button type="button" className="btn btnPrimary" onClick={handleSave}>Save</button>
         </div>
       </div>

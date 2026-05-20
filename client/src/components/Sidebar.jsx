@@ -353,14 +353,24 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                       </div>
                       <div className={styles.userMeta}>
                         {isOnline && (
-                          <button
-                            className={styles.profileSmall}
-                            onClick={e => { e.stopPropagation(); onCallUser?.(friend, 'voice'); }}
-                            disabled={!friend.calls_enabled}
-                            title={friend.calls_enabled ? `Call ${friend.username}` : 'Calls disabled'}
-                          >
-                            Call
-                          </button>
+                          <>
+                            <button
+                              className={styles.profileSmall}
+                              onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                              style={{ textDecoration: 'line-through' }}
+                              title="Currently not available"
+                            >
+                              Call
+                            </button>
+                            <button
+                              className={styles.profileSmall}
+                              onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                              style={{ textDecoration: 'line-through' }}
+                              title="Currently not available"
+                            >
+                              Video
+                            </button>
+                          </>
                         )}
                         <button
                           className={styles.profileSmall}
@@ -501,18 +511,26 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                       )
                     )}
                     {u.id !== user?.id && (
-                      <button
-                        className={styles.profileSmall}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCallUser?.(u, 'voice');
-                        }}
-                        disabled={u.id?.startsWith('guest_')}
-                        title={u.id?.startsWith('guest_') ? 'Guest users cannot be called' : `Call ${u.username}`}
-                      >
-                        Call
-                      </button>
+                      <>
+                        <button
+                          className={styles.profileSmall}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                          style={{ textDecoration: 'line-through' }}
+                          title="Currently not available"
+                        >
+                          Call
+                        </button>
+                        <button
+                          className={styles.profileSmall}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                          style={{ textDecoration: 'line-through' }}
+                          title="Currently not available"
+                        >
+                          Video
+                        </button>
+                      </>
                     )}
                     <button
                       className={styles.profileSmall}

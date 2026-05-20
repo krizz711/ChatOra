@@ -29,6 +29,28 @@ const {
   sanitizeUuid,
 } = require('../middleware/validation');
 
+let _io = null;
+
+// Broadcast user profile update to all connected clients
+const broadcastUserUpdate = (user) => {
+  if (!_io) return;
+  const u = withOwnerFlag(user);
+  const publicUser = {
+    id: u.id,
+    username: u.username,
+    avatar_url: u.avatar_url,
+    country: u.country || null,
+    state: u.state || null,
+    gender: u.gender || 'other',
+    age: u.age || null,
+    star_count: u.star_count || 0,
+    is_owner: Boolean(u.is_owner),
+    flair: u.flair || null,
+    flairs: Array.isArray(u.flairs) ? u.flairs : (u.flair ? [u.flair] : []),
+  };
+  _io.emit('user:updated', { userId: user.id, user: publicUser });
+};
+
 // Dedicated auth rate limiter for credential entry points
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -75,7 +97,7 @@ router.get('/google', (req, res, next) => {
 // Step 2: Google callback with detailed error logging and state check
 router.get('/google/callback', (req, res, next) => {
   const CLIENT = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/$/, '');
-  const stateCookie = req.cookies && req.cookies.nexchat_oauth_state;
+  const stateCookie = req.cookies && req.cookies.chatora_oauth_state;
   const stateQuery = req.query.state;
   try {
     const safeStateCookie = sanitizeString(String(stateCookie || ''), { field: 'state', min: 8, max: 64, pattern: /^[a-f0-9]+$/i });
@@ -126,7 +148,7 @@ router.get('/google/callback', (req, res, next) => {
 // Exchange cookie for token and user
 router.get('/oauth-token', async (req, res) => {
   try {
-    const token = req.cookies && req.cookies.nexchat_oauth_token;
+    const token = req.cookies && req.cookies.chatora_oauth_token;
     if (!token) return res.status(401).json({ error: 'no_token' });
 
     let decoded;
@@ -472,6 +494,10 @@ router.put('/flair', authMiddleware, async (req, res) => {
     if (error) throw error;
 
     const { email, password_hash, google_id, ...publicUser } = withOwnerFlag(data);
+    
+    // Broadcast flair update to all connected clients
+    broadcastUserUpdate(data);
+    
     res.json({ user: publicUser });
   } catch (err) {
     return handleValidationError(res, err) || res.status(500).json({ error: err.message });
@@ -559,4 +585,7 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
-module.exports = router;
+module.exports = (io) => {
+  _io = io;
+  return router;
+};

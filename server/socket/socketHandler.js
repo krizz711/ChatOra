@@ -278,15 +278,12 @@ const insertRoomMessage = async (payload) => {
   return fallback.error;
 };
 
-const buildPrivateMessage = ({ fromUser, toUserId, text = '', fileUrl = null, fileName = null, fileType = null, ciphertext = null, nonce = null, encrypted = false }) => ({
+const buildPrivateMessage = ({ fromUser, toUserId, text = '', fileUrl = null, fileName = null, fileType = null }) => ({
   id: uuidv4(),
-  text: encrypted ? '' : text,
+  text,
   fileUrl,
   fileName,
   fileType,
-  ciphertext: ciphertext || null,
-  nonce: nonce || null,
-  encrypted: !!encrypted,
   sender: buildSender(fromUser),
   toUserId,
   timestamp: new Date().toISOString(),
@@ -296,9 +293,6 @@ const buildPrivateMessage = ({ fromUser, toUserId, text = '', fileUrl = null, fi
 const mapPrivateMessage = (row) => ({
   id: row.id,
   text: row.text || '',
-  ciphertext: row.ciphertext || null,
-  nonce: row.nonce || null,
-  encrypted: row.encrypted || false,
   fileUrl: row.file_url || null,
   fileName: row.file_name || null,
   fileType: row.file_type || null,
@@ -317,9 +311,6 @@ const storePrivateMessage = async (message, recipient) => {
       sender_snapshot: message.sender,
       recipient_snapshot: recipient || { id: message.toUserId },
       text: message.text || '',
-      ciphertext: message.ciphertext || null,
-      nonce: message.nonce || null,
-      encrypted: message.encrypted || false,
       file_url: message.fileUrl || null,
       file_name: message.fileName || null,
       file_type: message.fileType || null,
@@ -552,6 +543,17 @@ const handler = (io) => {
       if (!checkRate(socket.id, 'private:history')) return socket.emit('private:history', { withUserId, messages: [] });
 
       try {
+        // Check if either user has blocked the other
+        const { data: blocks, error: blockError } = await supabase
+          .from('user_blocks')
+          .select('id')
+          .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${withUserId}),and(blocker_id.eq.${withUserId},blocked_id.eq.${user.id})`)
+          .limit(1);
+
+        if (blockError || (blocks && blocks.length > 0)) {
+          return socket.emit('private:history', { withUserId, messages: [] });
+        }
+
         // Use separate filter conditions instead of string interpolation
         const { data, error } = await supabase
           .from('private_messages')
@@ -574,24 +576,37 @@ const handler = (io) => {
       }
     });
 
-    socket.on('private:send', async ({ toUserId, text, fileUrl, fileName, fileType, ciphertext, nonce, encrypted }) => {
-      // Accept either plaintext text OR ciphertext payload. Do not touch ciphertext.
+    socket.on('private:send', async ({ toUserId, text, fileUrl, fileName, fileType }) => {
       try {
         toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
-        ensureSizeUnder({ toUserId, text, fileUrl, fileName, fileType, ciphertext, nonce, encrypted }, 'private message', 32768);
+        ensureSizeUnder({ toUserId, text, fileUrl, fileName, fileType }, 'private message', 32768);
         if (fileUrl) fileUrl = sanitizeUrl(fileUrl, { field: 'fileUrl', max: 2048, allowedHosts: ['res.cloudinary.com', 'cloudinary.com'] });
         if (fileName) fileName = sanitizeFileName(fileName);
         if (fileType) fileType = sanitizeString(String(fileType), { field: 'fileType', min: 1, max: 100, pattern: /^[A-Za-z0-9.+\/-]+$/ });
-        if (ciphertext && typeof ciphertext !== 'string') throw new Error('Invalid ciphertext');
-        if (nonce && typeof nonce !== 'string') throw new Error('Invalid nonce');
       } catch {
         return socket.emit('message:error', { error: 'Invalid private message payload' });
       }
-      if (!text && !fileUrl && !ciphertext) return;
+      if (!text?.trim() && !fileUrl) return;
       if (!checkRate(socket.id, 'private:send')) return socket.emit('message:error', { error: 'You are sending messages too fast. Slow down.' });
 
-      const isEncrypted = !!encrypted && !!ciphertext;
-      const safeText = isEncrypted ? '' : (text ? filterMessage(sanitize(text)) : '');
+      try {
+        // Check if recipient has blocked the sender
+        const { data: blocks, error: blockError } = await supabase
+          .from('user_blocks')
+          .select('id')
+          .eq('blocker_id', toUserId)
+          .eq('blocked_id', user.id)
+          .limit(1);
+
+        if (blockError || (blocks && blocks.length > 0)) {
+          return socket.emit('message:error', { error: 'This user has blocked you' });
+        }
+      } catch (err) {
+        console.error('Failed to check block status:', err);
+        return socket.emit('message:error', { error: 'Failed to send message' });
+      }
+
+      const safeText = text ? filterMessage(sanitize(text)) : '';
 
       const message = buildPrivateMessage({
         fromUser: user,
@@ -600,9 +615,6 @@ const handler = (io) => {
         fileUrl: fileUrl || null,
         fileName: fileName || null,
         fileType: fileType || null,
-        ciphertext: ciphertext || null,
-        nonce: nonce || null,
-        encrypted: isEncrypted,
       });
 
       const activeRecipient = getActiveUser(toUserId);
@@ -782,22 +794,6 @@ const handler = (io) => {
       activeTarget.socketIds.forEach(sid => {
         const s = io.sockets.sockets.get(sid);
         if (s) s.emit('call:ended', { fromUserId: user.id });
-      });
-    });
-
-    socket.on('key:exchange', ({ toUserId, publicKey }) => {
-      try {
-        toUserId = sanitizeUserId(toUserId, 'toUserId', { allowGuest: true });
-        publicKey = sanitizeString(String(publicKey || ''), { field: 'publicKey', min: 32, max: 8192 });
-        ensureSizeUnder({ toUserId, publicKey }, 'key exchange', 16384);
-      } catch {
-        return;
-      }
-      const activeTarget = getActiveUser(toUserId);
-      if (!activeTarget) return;
-      activeTarget.socketIds.forEach(sid => {
-        const s = io.sockets.sockets.get(sid);
-        if (s) s.emit('key:exchange', { fromUserId: user.id, publicKey });
       });
     });
 

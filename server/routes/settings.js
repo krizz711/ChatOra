@@ -119,7 +119,7 @@ router.post('/help', async (req, res) => {
   }
 
   const payload = {
-    from: process.env.SMTP_USER || 'chatora-app',
+    from: process.env.SMTP_USER || process.env.GMAIL_USER || 'chatora-app',
     to: HELP_EMAIL,
     subject: `ChatOra Help — ${req.user.username}`,
     text: [
@@ -132,12 +132,15 @@ router.post('/help', async (req, res) => {
   };
 
   try {
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const smtpUser = process.env.SMTP_USER || process.env.GMAIL_USER;
+    const smtpPass = process.env.SMTP_PASS || process.env.GMAIL_PASS;
+
+    if (smtpUser && smtpPass) {
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+          user: smtpUser,
+          pass: smtpPass,
         },
       });
       await transporter.sendMail(payload);

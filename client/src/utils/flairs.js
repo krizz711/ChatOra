@@ -60,7 +60,6 @@ export const getAutoFlairs = (user) => {
   else if (stars >= 25) result.push(getFlairById('superstar'));
   else if (stars >= 10) result.push(getFlairById('popular'));
   else if (stars >= 3)  result.push(getFlairById('regular'));
-  else                  result.push(getFlairById('newcomer'));
   return result.filter(Boolean);
 };
 
@@ -75,7 +74,7 @@ export const getUserFlairs = (user, { showPrivate = false } = {}) => {
 
   let all = [...auto, ...extra];
 
-  if (showPrivate && user?.is_owner) {
+  if (user?.is_owner) {
     const earth = getFlairById('earthloader');
     if (earth && !all.some(f => f.id === earth.id)) {
       all = [...all, earth];
