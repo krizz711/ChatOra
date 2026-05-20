@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Auth.module.css';
+import { Country, State } from 'country-state-city';
 
 const SERVER = import.meta.env.VITE_SERVER_URL || '';
 
@@ -37,6 +38,13 @@ export default function Login() {
   }, [searchParams]);
 
   const handle = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }));
+
+  const handleCountryChange = e => {
+    setForm(p => ({ ...p, country: e.target.value, state: '' }));
+  };
+
+  const selectedCountryObj = Country.getAllCountries().find(c => c.name === form.country);
+  const availableStates = selectedCountryObj ? State.getStatesOfCountry(selectedCountryObj.isoCode) : [];
 
   const submitGuest = async e => {
     e.preventDefault();
@@ -121,27 +129,39 @@ export default function Login() {
                 />
                 <span className={styles.fieldHint}>Letters, numbers, _ and - only</span>
               </div>
-              <div className={styles.field}>
-                <label>Country</label>
-                <input name="country" value={form.country} onChange={e => setForm(p => ({ ...p, country: e.target.value }))} placeholder="e.g. Canada" required id="guest-country-input" />
+              <div className={styles.twoCol}>
+                <div className={styles.field}>
+                  <label>Country</label>
+                  <select name="country" value={form.country} onChange={handleCountryChange} required id="guest-country-select">
+                    <option value="">Select Country</option>
+                    {Country.getAllCountries().map(c => (
+                      <option key={c.isoCode} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className={styles.field}>
+                  <label>State / Region</label>
+                  <select name="state" value={form.state} onChange={handle} required={!!availableStates.length} disabled={!availableStates.length && !!form.country} id="guest-state-select">
+                    <option value="">Select State</option>
+                    {availableStates.map(s => (
+                      <option key={`${selectedCountryObj?.isoCode}-${s.isoCode}`} value={s.name}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className={styles.twoCol}>
                 <div className={styles.field}>
-                  <label>State / Region</label>
-                  <input name="state" value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value }))} placeholder="e.g. Ontario" required id="guest-state-input" />
+                  <label>Gender</label>
+                  <select name="gender" value={form.gender} onChange={handle} id="guest-gender-select">
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
                 <div className={styles.field}>
                   <label>Age</label>
-                  <input name="age" type="number" min="13" max="120" value={form.age} onChange={e => setForm(p => ({ ...p, age: e.target.value }))} placeholder="21" required id="guest-age-input" />
+                  <input name="age" type="number" min="13" max="120" value={form.age} onChange={handle} placeholder="21" required id="guest-age-input" />
                 </div>
-              </div>
-              <div className={styles.field}>
-                <label>Gender</label>
-                <select name="gender" value={form.gender} onChange={e => setForm(p => ({ ...p, gender: e.target.value }))} id="guest-gender-select">
-                  <option value="female">Female</option>
-                  <option value="male">Male</option>
-                  <option value="other">Other</option>
-                </select>
               </div>
               <button className={`btn btn-primary ${styles.submit}`} disabled={loading || !guestName.trim()} id="guest-submit-btn">
                 {loading ? 'Starting...' : 'Enter as guest'}
