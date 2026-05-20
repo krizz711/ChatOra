@@ -123,9 +123,14 @@ const safeParseUser = (raw) => {
   }
 };
 
-const activeUsers = new Map();
+// ─── REDIS-BACKED PRESENCE ──────────────────────────────────────
+// Local socketMap only tracks socketId↔userId for this process.
+// All authoritative presence data lives in Redis hash 'active_users'.
+const localSockets = new Map(); // userId → { socketIds: Set, socketId: string (latest) }
 
 const { withOwnerFlag } = require('../utils/owner');
+
+const ACTIVE_USERS_KEY = 'active_users';
 
 const publicUser = (user) => {
   const u = withOwnerFlag(user);
@@ -144,48 +149,91 @@ const publicUser = (user) => {
   };
 };
 
-const addActiveSocket = (user, socketId) => {
-  const existing = activeUsers.get(user.id);
+const addActiveSocket = async (user, socketId) => {
+  const pub = publicUser(user);
+  // Track socket locally for this process
+  const existing = localSockets.get(user.id);
   if (existing) {
     existing.socketIds.add(socketId);
     existing.socketId = socketId;
-    existing.lastSeen = Date.now();
-    existing.user = { ...existing.user, ...publicUser(user) };
-    return existing;
+  } else {
+    localSockets.set(user.id, { socketIds: new Set([socketId]), socketId });
   }
-
-  const entry = {
-    ...publicUser(user),
-    user: publicUser(user),
-    socketId,
-    socketIds: new Set([socketId]),
-    lastSeen: Date.now(),
-  };
-  activeUsers.set(user.id, entry);
-  return entry;
+  // Write to Redis — authoritative store
+  const userData = { ...pub, socketId, lastSeen: Date.now() };
+  try {
+    await redis.hset(ACTIVE_USERS_KEY, { [user.id]: JSON.stringify(userData) });
+  } catch (err) {
+    console.error('Redis hset active_users failed:', err.message);
+  }
+  return { user: pub, socketId, socketIds: localSockets.get(user.id).socketIds };
 };
 
-const removeActiveSocket = (userId, socketId) => {
-  const existing = activeUsers.get(userId);
-  if (!existing) return false;
+const removeActiveSocket = async (userId, socketId) => {
+  const existing = localSockets.get(userId);
+  if (!existing) {
+    // Still try to clean Redis in case of stale data
+    try { await redis.hdel(ACTIVE_USERS_KEY, userId); } catch {}
+    return false;
+  }
 
   existing.socketIds.delete(socketId);
   if (existing.socketIds.size > 0) {
     existing.socketId = [...existing.socketIds][existing.socketIds.size - 1];
-    existing.lastSeen = Date.now();
-    return true;
+    // Update Redis with the remaining socket
+    try {
+      const currentRaw = await redis.hget(ACTIVE_USERS_KEY, userId);
+      const current = safeParseUser(currentRaw);
+      if (current) {
+        current.socketId = existing.socketId;
+        current.lastSeen = Date.now();
+        await redis.hset(ACTIVE_USERS_KEY, { [userId]: JSON.stringify(current) });
+      }
+    } catch (err) {
+      console.error('Redis update on removeActiveSocket failed:', err.message);
+    }
+    return true; // still online
   }
 
-  activeUsers.delete(userId);
+  localSockets.delete(userId);
+  // Fully offline — remove from Redis
+  try {
+    await redis.hdel(ACTIVE_USERS_KEY, userId);
+  } catch (err) {
+    console.error('Redis hdel active_users failed:', err.message);
+  }
   return false;
 };
 
-const listActiveUsers = () => [...activeUsers.values()].map(entry => ({
-  ...entry.user,
-  socketId: entry.socketId,
-}));
+const listActiveUsers = async () => {
+  try {
+    const all = await redis.hgetall(ACTIVE_USERS_KEY);
+    if (!all || Object.keys(all).length === 0) return [];
+    const users = [];
+    const invalidKeys = [];
+    Object.entries(all).forEach(([key, value]) => {
+      const parsed = safeParseUser(value);
+      if (parsed && parsed.id && parsed.socketId) {
+        users.push(parsed);
+      } else {
+        invalidKeys.push(key);
+      }
+    });
+    if (invalidKeys.length) {
+      await Promise.all(invalidKeys.map(k => redis.hdel(ACTIVE_USERS_KEY, k)));
+    }
+    return users;
+  } catch (err) {
+    console.error('Redis listActiveUsers failed:', err.message);
+    return [];
+  }
+};
 
-const getActiveUser = (userId) => activeUsers.get(userId) || null;
+const getActiveUser = (userId) => {
+  const local = localSockets.get(userId);
+  if (!local) return null;
+  return { socketIds: local.socketIds, socketId: local.socketId };
+};
 
 const ROOM_MESSAGE_TTL_MINUTES = Number(process.env.ROOM_MESSAGE_TTL_MINUTES || 30);
 const roomTtlMs = () => ROOM_MESSAGE_TTL_MINUTES * 60 * 1000;
@@ -341,17 +389,8 @@ const handler = (io) => {
     const user = socket.user;
     console.log(`Connected: ${user.username} (${socket.id})`);
 
-    const activeEntry = addActiveSocket(user, socket.id);
-    try {
-      await redis.hset('online_users', {
-        [user.id]: JSON.stringify({
-          ...activeEntry.user,
-          socketId: socket.id,
-        }),
-      });
-    } catch (err) {
-      console.error('Failed to update Redis presence:', err.message);
-    }
+    // addActiveSocket now writes to Redis internally
+    await addActiveSocket(user, socket.id);
 
     io.emit('user:online', { userId: user.id, username: user.username });
 
@@ -618,12 +657,18 @@ const handler = (io) => {
       });
 
       const activeRecipient = getActiveUser(toUserId);
-      let recipient = activeRecipient?.user || { id: toUserId };
-      let recipientRaw = null;
+      // Fetch recipient user data from Redis for storage
+      let recipient = { id: toUserId };
+      try {
+        const recipientRaw = await redis.hget(ACTIVE_USERS_KEY, toUserId);
+        const parsed = safeParseUser(recipientRaw);
+        if (parsed) recipient = parsed;
+      } catch {}
 
       await storePrivateMessage(message, recipient);
       socket.emit('private:receive', message);
 
+      // If recipient has local sockets on this process, deliver directly
       if (activeRecipient?.socketIds?.size) {
         activeRecipient.socketIds.forEach(sid => {
           if (sid === socket.id) return; // skip sender's own socket to avoid duplicate
@@ -633,43 +678,24 @@ const handler = (io) => {
         return;
       }
 
-      try {
-        recipientRaw = await redis.hget('online_users', toUserId);
-        recipient = safeParseUser(recipientRaw) || recipient;
-      } catch (err) {
-        console.error('Failed to read Redis presence:', err.message);
-      }
-
-      if (!recipient || !recipient.socketId) {
-        if (recipientRaw && recipient?.id) {
+      // Recipient may be on another process — try via Redis socketId
+      if (recipient.socketId) {
+        const recipientSocket = io.sockets.sockets.get(recipient.socketId);
+        if (recipientSocket) {
+          recipientSocket.emit('private:receive', message);
+        } else {
+          // Stale socket in Redis — clean up
           try {
-            const currentRaw = await redis.hget('online_users', recipient.id);
+            const currentRaw = await redis.hget(ACTIVE_USERS_KEY, toUserId);
             const current = safeParseUser(currentRaw);
             if (current?.socketId === recipient.socketId) {
-              await redis.hdel('online_users', recipient.id);
+              await redis.hdel(ACTIVE_USERS_KEY, toUserId);
             }
           } catch (err) {
             console.error('Failed to clean Redis presence:', err.message);
           }
         }
-        return;
       }
-
-      const recipientSocket = io.sockets.sockets.get(recipient.socketId);
-      if (!recipientSocket) {
-        try {
-          const currentRaw = await redis.hget('online_users', toUserId);
-          const current = safeParseUser(currentRaw);
-          if (current?.socketId === recipient.socketId) {
-            await redis.hdel('online_users', toUserId);
-          }
-        } catch (err) {
-          console.error('Failed to clean Redis presence:', err.message);
-        }
-        return;
-      }
-
-      recipientSocket.emit('private:receive', message);
     });
 
     // ─── GET ONLINE USERS ────────────────────────────────────────
@@ -683,39 +709,11 @@ const handler = (io) => {
         return;
       }
 
-      const memoryUsers = listActiveUsers();
-      if (memoryUsers.length) {
-        cachedUserList = memoryUsers;
-        cachedUserListAt = now;
-        socket.emit('users:list', memoryUsers);
-        return;
-      }
-
-      try {
-        const all = await redis.hgetall('online_users');
-        const users = [];
-        const invalidKeys = [];
-
-        Object.entries(all || {}).forEach(([key, value]) => {
-          const parsed = safeParseUser(value);
-          if (parsed && parsed.id && parsed.socketId) {
-            users.push(parsed);
-            return;
-          }
-          invalidKeys.push(key);
-        });
-
-        if (invalidKeys.length) {
-          await Promise.all(invalidKeys.map(key => redis.hdel('online_users', key)));
-        }
-
-        cachedUserList = users;
-        cachedUserListAt = now;
-        socket.emit('users:list', users);
-      } catch (err) {
-        console.error('Failed to read Redis presence:', err.message);
-        socket.emit('users:list', []);
-      }
+      // listActiveUsers reads from Redis (single source of truth)
+      const users = await listActiveUsers();
+      cachedUserList = users;
+      cachedUserListAt = now;
+      socket.emit('users:list', users);
     });
 
     socket.on('call:offer', async ({ toUserId, offer, callType }) => {
@@ -800,27 +798,8 @@ const handler = (io) => {
     // ─── DISCONNECT ──────────────────────────────────────────────
     socket.on('disconnect', async () => {
       console.log(`Disconnected: ${user.username}`);
-      const stillOnline = removeActiveSocket(user.id, socket.id);
-
-      try {
-        if (stillOnline) {
-          const activeEntry = getActiveUser(user.id);
-          await redis.hset('online_users', {
-            [user.id]: JSON.stringify({
-              ...activeEntry.user,
-              socketId: activeEntry.socketId,
-            }),
-          });
-        } else {
-          const currentRaw = await redis.hget('online_users', user.id);
-          const current = safeParseUser(currentRaw);
-          if (!current || current?.socketId === socket.id) {
-            await redis.hdel('online_users', user.id);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to update Redis presence on disconnect:', err.message);
-      }
+      // removeActiveSocket now handles Redis hset/hdel internally
+      const stillOnline = await removeActiveSocket(user.id, socket.id);
 
       io.emit(stillOnline ? 'user:online' : 'user:offline', { userId: user.id });
 
