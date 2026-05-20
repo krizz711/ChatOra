@@ -455,7 +455,7 @@ const handler = (io) => {
       const insertError = await insertRoomMessage({
         id: message.id,
         room_id: roomId,
-        sender_id: user.id,
+        sender_id: user.isGuest ? null : user.id,
         text: clean,
         reply_to: replyTo || null,
       });
@@ -513,7 +513,7 @@ const handler = (io) => {
       const insertError = await insertRoomMessage({
         id: message.id,
         room_id: roomId,
-        sender_id: user.id,
+        sender_id: user.isGuest ? null : user.id,
         file_url: fileUrl,
         file_name: fileName,
         file_type: fileType,
