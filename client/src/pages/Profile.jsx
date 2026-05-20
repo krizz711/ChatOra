@@ -266,6 +266,26 @@ export default function Profile() {
                 <button className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`} onClick={() => setShowFlairPicker(true)}>
                   {(user?.flair || (user?.flairs && user.flairs.length > 0)) ? 'Change Flair' : 'Add Flair'}
                 </button>
+                {(user?.flair || (user?.flairs && user.flairs.length > 0)) && (
+                  <button
+                    className={`${styles.btn} ${styles.btnSm} ${styles.btnSecondary}`}
+                    style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
+                    onClick={async () => {
+                      try {
+                        const data = await updateFlairs([]);
+                        if (data?.user) updateUser(data.user);
+                        else {
+                          const me = await fetchMe();
+                          if (me?.user) updateUser(me.user);
+                        }
+                      } catch (e) {
+                        alert(e.response?.data?.error || 'Failed to remove flair');
+                      }
+                    }}
+                  >
+                    Remove Flair
+                  </button>
+                )}
               </div>
             )}
           </div>

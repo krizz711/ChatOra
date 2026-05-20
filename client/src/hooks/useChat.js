@@ -28,10 +28,6 @@ export const useChat = (roomId) => {
 
       const onMessage = (msg) => {
         if (msg.roomId !== roomId) return;
-        // Play notification sound if enabled and message not from current user
-        if (currentUser?.notification_sound && msg.sender?.id !== currentUser?.id) {
-          playNotificationSound();
-        }
         setMessages(prev => {
           // If last message is a pending optimistic message with same text and sender, replace it
           const last = prev[prev.length - 1];

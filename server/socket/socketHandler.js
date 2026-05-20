@@ -552,6 +552,17 @@ const handler = (io) => {
       if (!checkRate(socket.id, 'private:history')) return socket.emit('private:history', { withUserId, messages: [] });
 
       try {
+        // Check if either user has blocked the other
+        const { data: blocks, error: blockError } = await supabase
+          .from('user_blocks')
+          .select('id')
+          .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${withUserId}),and(blocker_id.eq.${withUserId},blocked_id.eq.${user.id})`)
+          .limit(1);
+
+        if (blockError || (blocks && blocks.length > 0)) {
+          return socket.emit('private:history', { withUserId, messages: [] });
+        }
+
         // Use separate filter conditions instead of string interpolation
         const { data, error } = await supabase
           .from('private_messages')
@@ -587,8 +598,26 @@ const handler = (io) => {
       } catch {
         return socket.emit('message:error', { error: 'Invalid private message payload' });
       }
-      if (!text && !fileUrl && !ciphertext) return;
+      // Prevent blank messages: must have text, fileUrl, or encrypted content
+      if (!text?.trim() && !fileUrl && !ciphertext) return;
       if (!checkRate(socket.id, 'private:send')) return socket.emit('message:error', { error: 'You are sending messages too fast. Slow down.' });
+
+      try {
+        // Check if recipient has blocked the sender
+        const { data: blocks, error: blockError } = await supabase
+          .from('user_blocks')
+          .select('id')
+          .eq('blocker_id', toUserId)
+          .eq('blocked_id', user.id)
+          .limit(1);
+
+        if (blockError || (blocks && blocks.length > 0)) {
+          return socket.emit('message:error', { error: 'This user has blocked you' });
+        }
+      } catch (err) {
+        console.error('Failed to check block status:', err);
+        return socket.emit('message:error', { error: 'Failed to send message' });
+      }
 
       const isEncrypted = !!encrypted && !!ciphertext;
       const safeText = isEncrypted ? '' : (text ? filterMessage(sanitize(text)) : '');

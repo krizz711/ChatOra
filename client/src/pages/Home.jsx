@@ -83,10 +83,17 @@ export default function Home() {
 
       const handleUserOnline = () => socket.emit('users:online');
       const handleUserOffline = () => socket.emit('users:online');
+      
+      const handleUserUpdated = ({ userId, user: updatedUser }) => {
+        setOnlineUsers(prev => 
+          prev.map(u => u.id === userId ? { ...u, ...updatedUser } : u)
+        );
+      };
 
       socket.on('users:list', handleUsersList);
       socket.on('user:online', handleUserOnline);
       socket.on('user:offline', handleUserOffline);
+      socket.on('user:updated', handleUserUpdated);
 
       socket.emit('users:online');
 
@@ -94,6 +101,7 @@ export default function Home() {
         socket.off('users:list', handleUsersList);
         socket.off('user:online', handleUserOnline);
         socket.off('user:offline', handleUserOffline);
+        socket.off('user:updated', handleUserUpdated);
       };
     };
 

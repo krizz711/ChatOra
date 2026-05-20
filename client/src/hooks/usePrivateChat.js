@@ -29,6 +29,25 @@ export const usePrivateChat = (currentUserId, currentUser = null) => {
           sharedKeys.current[fromUserId] = shared;
           const sock = getSocket();
           if (sock) sock.emit('key:exchange', { toUserId: fromUserId, publicKey: myKeyPair.current.publicKey });
+
+          // Retry decryption of all messages from this user now that we have the key
+          setConversations(prev => {
+            const updated = { ...prev };
+            if (updated[fromUserId]) {
+              updated[fromUserId] = updated[fromUserId].map(msg => {
+                if (msg.encrypted && msg.ciphertext && msg.nonce) {
+                  try {
+                    const plaintext = decryptMessage(msg.ciphertext, msg.nonce, shared);
+                    return { ...msg, text: plaintext || '[encrypted]', encrypted: false };
+                  } catch (err) {
+                    return { ...msg, text: '[failed to decrypt]', encrypted: false };
+                  }
+                }
+                return msg;
+              });
+            }
+            return updated;
+          });
         } catch (err) {
           console.error('key exchange error', err);
         }
@@ -46,10 +65,14 @@ export const usePrivateChat = (currentUserId, currentUser = null) => {
             if (sharedKey) {
               const plaintext = decryptMessage(msg.ciphertext, msg.nonce, sharedKey);
               displayMsg = { ...msg, text: plaintext || '[encrypted]', encrypted: false };
+            } else {
+              // Keep encrypted message intact for later decryption when key arrives
+              displayMsg = { ...msg, text: '[encrypted message - loading key...]' };
             }
           }
         } catch (err) {
           console.error('decrypt error', err);
+          displayMsg = { ...msg, text: '[failed to decrypt]', encrypted: false };
         }
 
         // Play notification sound if enabled and message not from current user
@@ -69,7 +92,23 @@ export const usePrivateChat = (currentUserId, currentUser = null) => {
         if (!withUserId) return;
         setConversations(prev => ({
           ...prev,
-          [withUserId]: (Array.isArray(messages) ? messages : []).slice(-MAX_MESSAGES),
+          [withUserId]: (Array.isArray(messages) ? messages : []).map(msg => {
+            // Try to decrypt history messages if we have the key
+            if (msg.encrypted && msg.ciphertext && msg.nonce) {
+              const sharedKey = sharedKeys.current[withUserId];
+              if (sharedKey) {
+                try {
+                  const plaintext = decryptMessage(msg.ciphertext, msg.nonce, sharedKey);
+                  return { ...msg, text: plaintext || '[encrypted]', encrypted: false };
+                } catch (err) {
+                  return { ...msg, text: '[failed to decrypt]', encrypted: false };
+                }
+              }
+              // No key yet, keep encrypted data for later retry
+              return { ...msg, text: '[encrypted message - loading key...]' };
+            }
+            return msg;
+          }).slice(-MAX_MESSAGES),
         }));
       };
 
