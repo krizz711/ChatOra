@@ -356,16 +356,16 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                           <>
                             <button
                               className={styles.profileSmall}
-                              disabled
-                              style={{ textDecoration: 'line-through', cursor: 'not-allowed' }}
+                              onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                              style={{ textDecoration: 'line-through' }}
                               title="Currently not available"
                             >
                               Call
                             </button>
                             <button
                               className={styles.profileSmall}
-                              disabled
-                              style={{ textDecoration: 'line-through', cursor: 'not-allowed' }}
+                              onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                              style={{ textDecoration: 'line-through' }}
                               title="Currently not available"
                             >
                               Video
@@ -515,8 +515,8 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                         <button
                           className={styles.profileSmall}
                           type="button"
-                          disabled
-                          style={{ textDecoration: 'line-through', cursor: 'not-allowed' }}
+                          onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                          style={{ textDecoration: 'line-through' }}
                           title="Currently not available"
                         >
                           Call
@@ -524,8 +524,8 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
                         <button
                           className={styles.profileSmall}
                           type="button"
-                          disabled
-                          style={{ textDecoration: 'line-through', cursor: 'not-allowed' }}
+                          onClick={(e) => { e.stopPropagation(); alert("Currently not available"); }}
+                          style={{ textDecoration: 'line-through' }}
                           title="Currently not available"
                         >
                           Video

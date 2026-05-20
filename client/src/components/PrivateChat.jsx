@@ -85,10 +85,10 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
           </button>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          <button className={styles.iconBtn} disabled style={{ textDecoration: 'line-through', opacity: 0.5, cursor: 'not-allowed' }} title="Currently not available">
+          <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
             Call
           </button>
-          <button className={styles.iconBtn} disabled style={{ textDecoration: 'line-through', opacity: 0.5, cursor: 'not-allowed' }} title="Currently not available">
+          <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
             Video
           </button>
           <button className={styles.iconBtn} onClick={() => onViewProfile?.(targetUser)} title="View profile">
