@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import styles from './Auth.module.css';
 import { Country, State } from 'country-state-city';
-import Logo from '../components/Logo';
 
 const SERVER = import.meta.env.VITE_SERVER_URL || '';
 
@@ -69,8 +68,9 @@ export default function Login() {
 
   return (
     <div className={styles.page}>
+      <div className={styles.topLeftLogo}>ChatOra</div>
       <div className={styles.card}>
-          <div style={{ marginBottom: 28 }}><Logo size="large" /></div>
+
           <p className={styles.sub}>
             {mode === 'options' && 'Choose how to continue'}
             {mode === 'guest' && 'Continue as guest'}
