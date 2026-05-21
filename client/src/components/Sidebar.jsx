@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { getSocket } from '../socket';
 import { getUserFlairs } from '../utils/flairs';
 import FlairBadge from './FlairBadge';
+import Logo from './Logo';
 import {
   fetchGroups,
   createGroup,
@@ -172,7 +173,7 @@ export default function Sidebar({ activeRoom, onRoomSelect, onlineUsers, onUserC
     <div className={styles.sidebar}>
       {/* Header */}
       <div className={styles.header}>
-        <span className={styles.logo}>ChatOra</span>
+        <Logo size="medium" />
         <div className={styles.headerActions}>
 
           <button className={styles.iconBtn} onClick={() => navigate('/profile')} title="Profile">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import s from './SplashScreen.module.css';
 import el from './EarthLoader.module.css';
+import Logo from './Logo';
 
 const SPLASH_DURATION = 2000; // 2 seconds
 const TICK = 50;              // progress update interval
@@ -102,9 +103,9 @@ export default function SplashScreen({ onDone, isLoaded }) {
         <div className={`${s.splashContainer} ${fadeOut ? s.fadeOut : ''}`}>
 
             {/* Brand */}
-            <div className={s.brand}>
-                <div className={s.brandName}>ChatOra</div>
-                <div className={s.brandTagline}>Connect. Chat. Explore.</div>
+            <div className={s.brand} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Logo size="xl" />
+                <div className={s.brandTagline} style={{ marginTop: 12 }}>Connect. Chat. Explore.</div>
             </div>
 
             {/* Earth + Moon */}
