@@ -20,7 +20,7 @@ export default function Logo({ size = 'medium', className = '' }) {
         color: 'var(--text, #f5f7ff)',
         lineHeight: 1,
       }}
-      aria-label="NexChat"
+      aria-label="ChatOra"
     >
       <span
         aria-hidden="true"
@@ -33,7 +33,7 @@ export default function Logo({ size = 'medium', className = '' }) {
           flexShrink: 0,
         }}
       />
-      <span style={{ fontSize: preset.fontSize }}>NexChat</span>
+      <span style={{ fontSize: preset.fontSize }}>ChatOra</span>
     </div>
   );
 }
