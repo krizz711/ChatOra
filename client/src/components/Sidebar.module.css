@@ -715,8 +715,18 @@
   }
 
   .userBtn {
-    padding: 8px 10px;
+    padding: 8px 6px;
+    gap: 4px;
     font-size: 12px;
+  }
+
+  .userMeta {
+    gap: 4px;
+  }
+
+  .profileSmall {
+    padding: 3px 6px;
+    font-size: 10px;
   }
 
   .starBtn {

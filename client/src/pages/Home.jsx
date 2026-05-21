@@ -13,7 +13,6 @@ import CallingScreen from '../components/CallingScreen';
 import SplashScreen from '../components/SplashScreen';
 import styles from './Home.module.css';
 import PageBack from '../components/PageBack';
-import Logo from '../components/Logo';
 
 export default function Home() {
   const { user } = useAuth();
@@ -264,8 +263,8 @@ export default function Home() {
               <ChatRoom key={activeRoom.id} room={activeRoom} onUserClick={handleUserClick} />
             ) : (
               <div className={styles.welcome}>
-                <div className={styles.welcomeInner} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ marginBottom: 20 }}><Logo size="xl" /></div>
+                <div className={styles.welcomeInner}>
+                  <div className={styles.welcomeLogo}>ChatOra</div>
                   <p>Select a room from the sidebar to start chatting.</p>
                   <p className={styles.hint}>Messages are not stored — they live only while you're connected.</p>
                 </div>

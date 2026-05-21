@@ -293,9 +293,9 @@
 
 /* Full screen modifier when PrivateChat is used as the mobile full-screen view */
 .fullScreen {
-  width: 100vw !important;
-  height: 100dvh !important;
-  min-height: 100dvh !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
   border-radius: 0 !important;
   display: flex;
   flex-direction: column;

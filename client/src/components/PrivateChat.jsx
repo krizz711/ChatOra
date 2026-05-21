@@ -85,19 +85,27 @@ export default function PrivateChat({ targetUser, messages, onSend, onSendFile, 
           </button>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
-            Call
-          </button>
-          <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
-            Video
-          </button>
+          {!fullScreen && (
+            <>
+              <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
+                Call
+              </button>
+              <button className={styles.iconBtn} onClick={() => alert("Currently not available")} style={{ textDecoration: 'line-through', opacity: 0.5 }} title="Currently not available">
+                Video
+              </button>
+            </>
+          )}
           <button className={styles.iconBtn} onClick={() => onViewProfile?.(targetUser)} title="View profile">
             Profile
           </button>
-          <button className={styles.iconBtn} onClick={() => downloadChatTxt(messages, `DM_${targetUser.username}`)} title="Download">
-            Save
-          </button>
-          <button className={styles.closeBtn} onClick={onClose}>x</button>
+          {!fullScreen && (
+            <>
+              <button className={styles.iconBtn} onClick={() => downloadChatTxt(messages, `DM_${targetUser.username}`)} title="Download">
+                Save
+              </button>
+              <button className={styles.closeBtn} onClick={onClose}>x</button>
+            </>
+          )}
         </div>
       </div>
 

@@ -163,6 +163,17 @@
   color: var(--accent);
 }
 
+.topLeftLogo {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--accent);
+  z-index: 10;
+}
+
 .sub {
   color: var(--text2);
   font-size: 14px;
