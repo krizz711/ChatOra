@@ -89,7 +89,10 @@ const parseAge = (value) => {
 router.get('/google', (req, res, next) => {
   const state = require('crypto').randomBytes(16).toString('hex');
   const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 };
-  if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
+  if (process.env.NODE_ENV === 'production') {
+    cookieOpts.secure = true;
+    cookieOpts.sameSite = 'none';
+  }
   res.cookie('chatora_oauth_state', state, cookieOpts);
   passport.authenticate('google', { scope: ['profile', 'email'], state })(req, res, next);
 });
@@ -137,7 +140,10 @@ router.get('/google/callback', (req, res, next) => {
 
     // Set short-lived httpOnly cookie with the JWT instead of exposing it in the URL
     const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 5 * 60 * 1000 };
-    if (process.env.NODE_ENV === 'production') cookieOpts.secure = true;
+    if (process.env.NODE_ENV === 'production') {
+      cookieOpts.secure = true;
+      cookieOpts.sameSite = 'none';
+    }
     res.cookie('chatora_oauth_token', token, cookieOpts);
 
     // Redirect to client callback WITHOUT token in URL

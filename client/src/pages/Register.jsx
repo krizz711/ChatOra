@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import styles from './Auth.module.css';
+import Logo from '../components/Logo';
 
 const SERVER = import.meta.env.VITE_SERVER_URL || '';
 
@@ -13,7 +14,7 @@ export default function Register() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.logo}>ChatOra</div>
+        <div style={{ marginBottom: 28 }}><Logo size="large" /></div>
         <p className={styles.sub}>Create your account</p>
 
         <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text2)' }}>
